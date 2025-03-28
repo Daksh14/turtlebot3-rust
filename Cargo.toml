@@ -1,0 +1,8 @@
+[package]
+name = "ros2_cmd_vel_publisher"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+r2r = "0.9"                                    # Use the latest version
+tokio = { version = "1", features = ["full"] }
