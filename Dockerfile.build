@@ -1,0 +1,19 @@
+FROM my-system-image:latest
+
+ARG NAME="rust-example"
+
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+COPY . /workspace/${NAME}
+
+RUN cd ${NAME} && . /opt/ros/jazzy/setup.sh && cargo build --release
+
+# Export the binary
+RUN mkdir -p /output && \
+    cp /workspace/project/target/release/* /output
+
+# Set the working directory
+WORKDIR /workspace/project
+
+# Default command to run when the container starts
+CMD ["/bin/bash"]
