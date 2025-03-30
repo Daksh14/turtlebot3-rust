@@ -1,3 +1,11 @@
-target/
+/target
 
-output/
+/my-system-image.tar
+
+/output
+
+/build
+
+/opencv-4.x
+
+/opencv_contrib-4.x

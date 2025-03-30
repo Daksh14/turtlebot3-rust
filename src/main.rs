@@ -12,6 +12,7 @@ use std::thread::current;
 use futures_core::Stream;
 use r2r::QosProfile;
 use r2r::{Node, Publisher};
+use tokio::time::{Duration, sleep};
 
 // generate a node with a given name and namespace is set to turtlemove statically
 pub fn generate_node(name: &str) -> r2r::Result<Node> {
@@ -47,38 +48,36 @@ enum Sequence {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut node = generate_node("nav_node")?;
     let publisher = node.create_publisher("/cmd_vel", QosProfile::default())?;
+    // 1. First instruction as the binary is run to move the bot 10 units x direction
+    // and 5 units y direction
+    nav::nav_move(&publisher, 10.0, 5.0).await;
 
-    let handle = tokio::task::spawn_blocking(move || {
-        let current_sequence = Sequence::Intial360Rotation;
+    // this is what the bot is doing at any point in time
+    let mut current_sequence = Sequence::Intial360Rotation;
 
-        loop {
-            node.spin_once(std::time::Duration::from_millis(100));
-        }
-    });
+    loop {
+        match current_sequence {
+            Sequence::Intial360Rotation => {
+                nav::rotate360(&publisher);
 
-    tokio::task::spawn(async move || {
-        loop {
-            match current_sequence {
-                Sequence::Intial360Rotation => {}
-                Sequence::RandomMovement => {
-                    // RandomMovement
-                }
-                Sequence::TrackingToCharm => {
-                    // TrackingToCharm
-                }
-                Sequence::SharmCollected => {
-                    // SharmCollected
-                }
-                _ => {
-                    // Default case
-                }
+                sleep(Duration::from_secs(3)).await;
+            }
+            Sequence::RandomMovement => {
+                // RandomMovement
+            }
+            Sequence::TrackingToCharm => {
+                // TrackingToCharm
+            }
+            Sequence::SharmCollected => {
+                // SharmCollected
+            }
+            _ => {
+                // Default case
             }
         }
-    });
 
-    nav::nav_move(&publisher, 2.0, 3.0).await;
-
-    handle.await?;
+        node.spin_once(std::time::Duration::from_millis(100));
+    }
 
     Ok(())
 }
