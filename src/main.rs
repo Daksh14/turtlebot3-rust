@@ -60,7 +60,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn({
         let mut lock = liadr_node_cl.lock().await;
         // subscribe to lidar node
-        let lidar_node_sub = lock.subscribe("/scan", QosProfile::default())?.boxed();
+        let qos = QosProfile::default().best_effort();
+        let lidar_node_sub = lock.subscribe("/scan", qos)?.boxed();
 
         lidar::lidar_scan(lidar_node_sub)
     });
