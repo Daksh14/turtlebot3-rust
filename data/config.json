@@ -1,0 +1,5 @@
+{
+  "model_path": "data/your_model.onnx",
+  "img_size": 640,
+  "names": ["charm", "cone", "apriltag"]
+}

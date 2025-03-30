@@ -5,6 +5,8 @@ mod nav;
 // Graceful error handling
 mod errors;
 
+mod yolo;
+
 use futures_core::Stream;
 use r2r::QosProfile;
 use r2r::{Node, Publisher};
