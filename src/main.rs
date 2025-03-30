@@ -79,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     loop {
         match current_sequence {
             Sequence::Intial360Rotation => {
-                nav::rotate360(&publisher);
+                nav::rotate360(&publisher).await;
 
                 sleep(Duration::from_secs(3)).await;
 
