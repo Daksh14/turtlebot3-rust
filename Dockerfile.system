@@ -34,7 +34,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg2 \
     lsb-release \
     clang \
+    unzip \
     libclang-dev \
+    cmake \
     sudo \
     build-essential \
     git \
@@ -56,3 +58,23 @@ RUN sudo add-apt-repository universe \
 # -------------------------------
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Add cross-compilation support for aarch64
+RUN rustup target add aarch64-unknown-linux-gnu
+RUN dpkg --add-architecture aarch64
+RUN sudo apt-get update
+
+# Install open cv static libraries
+RUN wget -O opencv.zip https://github.com/opencv/opencv/archive/4.x.zip
+RUN wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/4.x.zip
+RUN unzip opencv.zip && rm opencv.zip
+RUN unzip opencv_contrib.zip && rm opencv_contrib.zip
+RUN mkdir -p build && cd build
+
+RUN cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=NO \
+    -DCMAKE_INSTALL_PREFIX=/root/opencv -DBUILD_DOCS=OFF -DBUILD_EXAMPLES=OFF \
+    -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_opencv_java=OFF \
+    -DBUILD_opencv_python=OFF -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib-4.x/modules \
+    ../opencv-4.x
+
+RUN  make -j8 && make install
