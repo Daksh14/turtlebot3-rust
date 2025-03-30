@@ -1,5 +1,7 @@
 {
   "model_path": "data/your_model.onnx",
   "img_size": 640,
-  "names": ["picture_frame", "robot", "football", "sheep"]
+  "names": ["picture_frame", "robot", "football", "sheep"],
+  "ips": [],
+  "secret_key": "secrety"
 }

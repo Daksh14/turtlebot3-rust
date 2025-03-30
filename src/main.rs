@@ -4,12 +4,12 @@
 mod nav;
 // Graceful error handling
 mod errors;
-
+// yolo module
 // mod yolo;
+// lidar module
+mod lidar;
 
-use std::thread::current;
-
-use futures_core::Stream;
+use futures::Stream;
 use r2r::QosProfile;
 use r2r::{Node, Publisher};
 use tokio::time::{Duration, sleep};
@@ -46,14 +46,20 @@ enum Sequence {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut node = generate_node("nav_node")?;
-    let publisher = node.create_publisher("/cmd_vel", QosProfile::default())?;
+    let mut nav_node = generate_node("nav_node")?;
+    let mut lidar_node = generate_node("lidar")?;
+    // subscribe to lidar node
+    let lidar_node_sub = lidar_node.subscribe("/scan", QosProfile::default())?;
+    let publisher = nav_node.create_publisher("/cmd_vel", QosProfile::default())?;
     // 1. First instruction as the binary is run to move the bot 10 units x direction
     // and 5 units y direction
     nav::nav_move(&publisher, 10.0, 5.0).await;
 
+    lidar::lidar_scan(&lidar_node, lidar_node_sub);
+
     // this is what the bot is doing at any point in time
     let mut current_sequence = Sequence::Intial360Rotation;
+    let node_spin_dur = std::time::Duration::from_millis(100);
 
     loop {
         match current_sequence {
@@ -76,8 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        node.spin_once(std::time::Duration::from_millis(100));
+        nav_node.spin_once(node_spin_dur);
+        lidar_node.spin_once(node_spin_dur);
     }
-
-    Ok(())
 }
