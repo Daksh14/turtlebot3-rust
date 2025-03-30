@@ -15,7 +15,7 @@ pub async fn nav_move(publisher: &Publisher<Twist>, distance_x: f64, distance_y:
 
     // Time to move in a straight line
     let distance = (v_x.powi(2) + a_x.powi(2)).sqrt();
-    let travel_time = (distance / speed) as u64;
+    let travel_time = ((distance / speed) as u64) * 2;
 
     println!("Travel time: {}", travel_time);
     println!("distance: {}", distance);
@@ -71,5 +71,23 @@ pub async fn nav_move(publisher: &Publisher<Twist>, distance_x: f64, distance_y:
     }
 }
 
-// generate random ints and move randomly
-pub fn generate_random_ints() {}
+pub fn rotate360(publisher: &Publisher<Twist>) {
+    let twist = Twist {
+        linear: Vector3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }, // Move forward
+        angular: Vector3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.3,
+        }, // Rotate slightly
+    };
+
+    // Publish the rotation message
+    match publisher.publish(&twist) {
+        Ok(_) => println!("Rotating instruction sent"),
+        Err(e) => eprintln!("Failed to publish 360 rotating instructions {}", e),
+    }
+}
