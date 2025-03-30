@@ -6,7 +6,9 @@ use futures::{
 };
 
 pub async fn lidar_scan<'a>(stream: BoxStream<'a, LaserScan>) {
-    loop {
-        println!("hello");
+    // block and keep recivin messages
+    let mut stream = stream;
+    while let Some(message) = stream.next().await {
+        println!("Received: {:?}", message);
     }
 }
