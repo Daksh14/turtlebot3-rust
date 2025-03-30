@@ -49,6 +49,7 @@ enum Sequence {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut nav_node = generate_node("nav_node")?;
+
     let lidar_node = Arc::new(Mutex::new(generate_node("lidar")?));
     let liadr_node_cl = Arc::clone(&lidar_node);
 
@@ -61,7 +62,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut lock = liadr_node_cl.lock().await;
         // subscribe to lidar node
         let qos = QosProfile::default().best_effort();
-        let lidar_node_sub = lock.subscribe("/scan", qos)?.boxed();
+        let lidar_node_sub = lock.subscribe("/scan", qos).unwrap().boxed();
 
         lidar::lidar_scan(lidar_node_sub)
     });
