@@ -86,7 +86,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 current_sequence = Sequence::RandomMovement;
             }
             Sequence::RandomMovement => {
-                nav::nav_move(&publisher, 10.0, 5.0).await;
+                // nav::nav_move(&publisher, 10.0, 5.0).await;
 
                 match rx.recv().await {
                     Some(scan) => {
@@ -96,8 +96,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         println!("No data received");
                     }
                 }
-
-                break;
             }
             Sequence::TrackingToCharm => {
                 // TrackingToCharm
