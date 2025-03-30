@@ -5,7 +5,7 @@ mod nav;
 // Graceful error handling
 mod errors;
 
-mod yolo;
+// mod yolo;
 
 use std::thread::current;
 

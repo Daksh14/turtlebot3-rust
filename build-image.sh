@@ -9,9 +9,5 @@ docker build -t my-system -f Dockerfile.system .
 echo "Running the container..."
 container_id=$(docker run -dit my-system)
 
-# Step 3: Commit the container state
-echo "Committing the container state..."
-docker commit "$container_id" my-system-image
-
-# Saving container state as tar
-docker save my-system-image > my-system-image.tar
+# Copying project files to the container
+docker cp ./ $container_id:/rust-example/
