@@ -58,14 +58,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // and 5 units y direction
     nav::nav_move(&publisher, 10.0, 5.0).await;
 
-    tokio::spawn({
-        let mut lock = liadr_node_cl.lock().await;
-        // subscribe to lidar node
-        let qos = QosProfile::default().best_effort();
-        let lidar_node_sub = lock.subscribe("/scan", qos).unwrap().boxed();
+    // tokio::spawn({
+    //     let mut lock = liadr_node_cl.lock().await;
+    //     // subscribe to lidar node
+    //     let qos = QosProfile::default().best_effort();
+    //     let lidar_node_sub = lock.subscribe("/scan", qos).unwrap().boxed();
 
-        lidar::lidar_scan(lidar_node_sub)
-    });
+    //     lidar::lidar_scan(lidar_node_sub)
+    // });
 
     // this is what the bot is doing at any point in time
     let mut current_sequence = Sequence::Intial360Rotation;
