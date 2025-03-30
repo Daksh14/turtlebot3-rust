@@ -9,9 +9,11 @@ mod errors;
 // lidar module
 mod lidar;
 
-use futures::Stream;
+use futures::{Stream, StreamExt};
 use r2r::QosProfile;
 use r2r::{Node, Publisher};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use tokio::time::{Duration, sleep};
 
 // generate a node with a given name and namespace is set to turtlemove statically
@@ -47,15 +49,21 @@ enum Sequence {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut nav_node = generate_node("nav_node")?;
-    let mut lidar_node = generate_node("lidar")?;
-    // subscribe to lidar node
-    let lidar_node_sub = lidar_node.subscribe("/scan", QosProfile::default())?;
+    let lidar_node = Arc::new(Mutex::new(generate_node("lidar")?));
+    let liadr_node_cl = Arc::clone(&lidar_node);
+
     let publisher = nav_node.create_publisher("/cmd_vel", QosProfile::default())?;
     // 1. First instruction as the binary is run to move the bot 10 units x direction
     // and 5 units y direction
     nav::nav_move(&publisher, 10.0, 5.0).await;
 
-    lidar::lidar_scan(&lidar_node, lidar_node_sub);
+    tokio::spawn({
+        let mut lock = liadr_node_cl.lock().await;
+        // subscribe to lidar node
+        let lidar_node_sub = lock.subscribe("/scan", QosProfile::default())?.boxed();
+
+        lidar::lidar_scan(lidar_node_sub)
+    });
 
     // this is what the bot is doing at any point in time
     let mut current_sequence = Sequence::Intial360Rotation;
@@ -77,12 +85,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Sequence::SharmCollected => {
                 // SharmCollected
             }
-            _ => {
-                // Default case
-            }
         }
 
         nav_node.spin_once(node_spin_dur);
-        lidar_node.spin_once(node_spin_dur);
+        lidar_node.lock().await.spin_once(node_spin_dur);
     }
 }

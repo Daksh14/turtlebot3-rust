@@ -1,11 +1,14 @@
 use r2r::sensor_msgs::msg::LaserScan;
 
-use futures::{future, Stream, stream::StreamExt};
+use futures::{
+    Stream, future,
+    stream::{BoxStream, StreamExt},
+};
 
-pub async fn lidar_scan(lidar_node: &r2r::Node, stream: impl Stream<Item = LaserScan>) {
-    stream.for_each(|msg| {
-        println!("topic: scan lidar data: {:?}", msg);
-        future::ready(())
-    })
-    .await;
+pub async fn lidar_scan<'a>(stream: BoxStream<'a, LaserScan>) {
+    // block and keep recivin messages
+    let mut stream = stream;
+    while let Some(message) = stream.next().await {
+        println!("Received: {:?}", message);
+    }
 }
