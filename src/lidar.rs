@@ -37,7 +37,7 @@ pub fn lidar_data(data: LaserScan) -> Option<Direction> {
     let threshold = 0.5; // Distance threshold for detecting objects
     let len = lidar_data.len();
 
-    let size_of_quater = 23;
+    let size_of_quater = (len / 8) - 1;
 
     // there should be 8 quaters, the approx length of the lidar range is 203 elements
     let quater_one = &lidar_data[0..size_of_quater];
