@@ -24,8 +24,8 @@ pub async fn lidar_scan<'a>(stream: BoxStream<'a, LaserScan>, tx: Sender<LaserSc
     let mut stream = stream;
 
     while let Some(message) = stream.next().await {
-        if let Err(_) = tx.send(message).await {
-            println!("receiver dropped");
+        if let Err(e) = tx.send(message).await {
+            println!("receiver dropped: {}", e);
 
             return;
         }
