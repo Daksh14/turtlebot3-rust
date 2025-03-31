@@ -117,7 +117,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Sequence::Stop => {
                     nav::nav_stop(nav_node_cl).await;
 
-                    println!("Stopping");
+                    println!("Stopping stop stop");
 
                     break;
                 }
