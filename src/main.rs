@@ -92,7 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let cl_2 = Arc::clone(&cl);
 
                     tokio::spawn(async move {
-                        nav::nav_move(cl, 10.0, 0.0).await;
+                        nav::nav_move(cl, 0.5, 0.0).await;
                     });
 
                     match rx.recv().await {
@@ -105,8 +105,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                     nav::nav_stop(Arc::clone(&cl_2)).await;
                                     sleep(Duration::from_secs(3)).await;
-                                    nav::nav_move(Arc::clone(&cl_2), -20.0, 0.0).await;
-                                    nav::nav_move(cl_2, 20.0, -0.3).await;
+                                    nav::nav_move(Arc::clone(&cl_2), -0.4, 0.0).await;
+                                    nav::nav_move(cl_2, 0.5, -0.3).await;
                                 }
                             }
                         }

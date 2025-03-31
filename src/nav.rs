@@ -23,20 +23,14 @@ pub async fn nav_move(node: NavNode, distance_x: f64, turn_abs: f64) {
     let publisher = get_pub(node).await;
 
     let speed: f64 = 0.2;
-
-    let angle = distance_x.atan2(0.0);
-
-    let distance = distance_x.abs();
-    let travel_time = (distance / speed).ceil() as u64;
-    let v_x = speed * distance_x.signum();
+    let travel_time = (distance_x / speed).ceil() as u64;
 
     println!("Travel time: {}", travel_time);
-    println!("distance: {}", distance);
-    println!("v_x: {}", v_x);
+    println!("distance: {}", distance_x);
 
     let twist = Twist {
         linear: Vector3 {
-            x: v_x,
+            x: speed,
             y: 0.0,
             z: 0.0,
         }, // Move forward
