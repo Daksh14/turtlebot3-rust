@@ -51,32 +51,32 @@ pub fn lidar_data(data: LaserScan) {
     }
 
     if min_and_avg_q_two < threshold {
+        println!("north east");
+    }
+
+    if min_and_avg_q_three < threshold {
+        println!("east");
+    }
+
+    if min_and_avg_q_four < threshold {
+        println!("south east");
+    }
+
+    if min_and_avg_q_five < threshold {
         println!("south");
     }
 
-    // if min_and_avg_q_three < threshold {
-    //     println!("east");
-    // }
+    if min_and_avg_q_six < threshold {
+        println!("south west");
+    }
 
-    // if min_and_avg_q_four < threshold {
-    //     println!("west");
-    // }
+    if min_and_avg_q_seven < threshold {
+        println!("west");
+    }
 
-    // if min_and_avg_q_five < threshold {
-    //     println!("north east");
-    // }
-
-    // if min_and_avg_q_six < threshold {
-    //     println!("north west");
-    // }
-
-    // if min_and_avg_q_seven < threshold {
-    //     println!("south east");
-    // }
-
-    // if min_and_avg_q_eight < threshold {
-    //     println!("south west");
-    // }
+    if min_and_avg_q_eight < threshold {
+        println!("north west");
+    }
 }
 
 fn find_n_min_values(arr: Vec<f32>) -> Vec<f32> {
