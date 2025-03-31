@@ -89,6 +89,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 Sequence::RandomMovement => {
                     let cl = Arc::clone(&cl);
+                    let cl_2 = Arc::clone(&cl);
 
                     tokio::spawn(async move {
                         nav::nav_move(cl, 10.0, 5.0).await;
@@ -101,7 +102,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                 if let Direction::North = direction {
                                     println!("{:?}", direction);
-                                    current_sequence = Sequence::Stop;
+                                    nav::nav_stop(Arc::clone(&cl_2)).await;
+                                    nav::nav_move(cl_2, -10.0, 5.0).await;
                                 }
                             }
                         }
