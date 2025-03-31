@@ -29,9 +29,9 @@ pub async fn nav_move(publisher: &Publisher<Twist>, distance_x: f64, distance_y:
             z: 0.0,
         }, // Move forward
         angular: Vector3 {
-            x: a_x,
+            x: 0.0,
             y: 0.0,
-            z: 0.3,
+            z: a_x,
         }, // Rotate slightly
     };
 
@@ -39,15 +39,13 @@ pub async fn nav_move(publisher: &Publisher<Twist>, distance_x: f64, distance_y:
     match publisher.publish(&twist) {
         Ok(_) => println!(
             "Published: linear = {}, angular = {}",
-            twist.linear.x, twist.angular.x
+            twist.linear.x, twist.angular.z
         ),
         Err(e) => eprintln!("Failed to publish intial move instructions: {}", e),
     }
 
     // Sleep for time needed to reach distance
     sleep(Duration::from_secs(travel_time)).await;
-
-    nav_stop(publisher);
 }
 
 pub async fn rotate360(publisher: &Publisher<Twist>) {
