@@ -84,7 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 current_sequence = Sequence::RandomMovement;
             }
             Sequence::RandomMovement => {
-                nav::nav_move(&publisher, 10.0, 0.0);
+                nav::nav_move(&publisher, 10.0, 0.0).await;
 
                 match rx.recv().await {
                     Some(scan) => {
