@@ -24,19 +24,15 @@ pub async fn nav_move(node: NavNode, distance_x: f64, turn_abs: f64) {
 
     let speed: f64 = 0.2;
 
-    let angle = distance_x.atan2(turn_abs);
+    let angle = distance_x.atan2(0.0);
 
-    let v_x = speed * angle.cos();
-    let a_x = speed * angle.sin();
-
-    // Time to move in a straight line
-    let distance = (v_x.powi(2) + a_x.powi(2)).sqrt();
-    let travel_time = ((distance / speed) as u64) * 2;
+    let distance = distance_x.abs();
+    let travel_time = (distance / speed).ceil() as u64;
+    let v_x = speed * distance_x.signum();
 
     println!("Travel time: {}", travel_time);
     println!("distance: {}", distance);
     println!("v_x: {}", v_x);
-    println!("turn_abs: {}", turn_abs);
 
     let twist = Twist {
         linear: Vector3 {
