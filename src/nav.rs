@@ -19,12 +19,12 @@ pub async fn get_pub(node: NavNode) -> Publisher<Twist> {
 }
 
 // move x units in x direction and y units in y direction
-pub async fn nav_move(node: NavNode, distance_x: f64, distance_y: f64) {
+pub async fn nav_move(node: NavNode, distance_x: f64, turn_abs: f64) {
     let publisher = get_pub(node).await;
 
-    let speed = 0.2;
+    let speed: f64 = 0.2;
 
-    let angle = distance_y.atan2(distance_x);
+    let angle = distance_x.atan2(turn_abs);
 
     let v_x = speed * angle.cos();
     let a_x = speed * angle.sin();
@@ -36,7 +36,7 @@ pub async fn nav_move(node: NavNode, distance_x: f64, distance_y: f64) {
     println!("Travel time: {}", travel_time);
     println!("distance: {}", distance);
     println!("v_x: {}", v_x);
-    println!("a_x: {}", a_x);
+    println!("turn_abs: {}", turn_abs);
 
     let twist = Twist {
         linear: Vector3 {
@@ -47,7 +47,7 @@ pub async fn nav_move(node: NavNode, distance_x: f64, distance_y: f64) {
         angular: Vector3 {
             x: 0.0,
             y: 0.0,
-            z: a_x,
+            z: turn_abs,
         }, // Rotate slightly
     };
 
