@@ -102,8 +102,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                                 if let Direction::North = direction {
                                     println!("{:?}", direction);
+
                                     nav::nav_stop(Arc::clone(&cl_2)).await;
-                                    nav::nav_move(cl_2, -10.0, 5.0).await;
+                                    sleep(Duration::from_secs(3)).await;
+                                    nav::nav_move(cl_2, -20.0, 0.0).await;
                                 }
                             }
                         }
