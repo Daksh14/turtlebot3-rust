@@ -100,6 +100,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 println!("Detected direction: {:?}", direction);
 
                                 if let direction = Direction::North {
+                                    println!("{:?}", direction);
                                     current_sequence = Sequence::Stop;
                                 }
                             }
