@@ -7,6 +7,17 @@ use futures::{
 use r2r::sensor_msgs::msg::LaserScan;
 use tokio::sync::mpsc::Sender;
 
+pub enum Direction {
+    North,
+    NorthEast,
+    East,
+    SouthEast,
+    South,
+    SouthWest,
+    West,
+    NorthWest,
+}
+
 pub async fn lidar_scan<'a>(stream: BoxStream<'a, LaserScan>, tx: Sender<LaserScan>) {
     // block and keep recivin messages
     let mut stream = stream;
@@ -20,7 +31,7 @@ pub async fn lidar_scan<'a>(stream: BoxStream<'a, LaserScan>, tx: Sender<LaserSc
     }
 }
 
-pub fn lidar_data(data: LaserScan) {
+pub fn lidar_data(data: LaserScan) -> Option<Direction> {
     let lidar_data = data.ranges;
     let threshold = 0.5; // Distance threshold for detecting objects
     let len = lidar_data.len();
@@ -47,36 +58,38 @@ pub fn lidar_data(data: LaserScan) {
     let min_and_avg_q_eight = find_average(find_n_min_values(quater_eight.to_owned()));
 
     if min_and_avg_q_one < threshold {
-        println!("north");
+        return Some(Direction::North);
     }
 
     if min_and_avg_q_two < threshold {
-        println!("north east");
+        return Some(Direction::NorthEast);
     }
 
     if min_and_avg_q_three < threshold {
-        println!("east");
+        return Some(Direction::East);
     }
 
     if min_and_avg_q_four < threshold {
-        println!("south east");
+        return Some(Direction::SouthEast);
     }
 
     if min_and_avg_q_five < threshold {
-        println!("south");
+        return Some(Direction::South);
     }
 
     if min_and_avg_q_six < threshold {
-        println!("south west");
+        return Some(Direction::SouthWest);
     }
 
     if min_and_avg_q_seven < threshold {
-        println!("west");
+        return Some(Direction::West);
     }
 
     if min_and_avg_q_eight < threshold {
-        println!("north west");
+        return Some(Direction::NorthWest);
     }
+
+    None
 }
 
 fn find_n_min_values(arr: Vec<f32>) -> Vec<f32> {
