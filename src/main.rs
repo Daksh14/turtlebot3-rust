@@ -90,7 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 match rx.recv().await {
                     Some(scan) => {
-                        println!("got = {:?}", scan);
+                        lidar::lidar_data(scan);
                     }
                     None => {
                         println!("No data received");
