@@ -99,7 +99,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Some(direction) = lidar::lidar_data(scan) {
                                 println!("Detected direction: {:?}", direction);
 
-                                if let direction = Direction::North {
+                                if let Direction::North = direction {
                                     println!("{:?}", direction);
                                     current_sequence = Sequence::Stop;
                                 }
