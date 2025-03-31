@@ -25,6 +25,8 @@ pub fn lidar_data(data: LaserScan) {
     let threshold = 0.5; // Distance threshold for detecting objects
     let len = lidar_data.len();
 
+    println!("{}", len);
+
     // the bot is facing in a certain direction for us to determine the left, center, and right region
     let bottom_left = &lidar_data[0..20];
     let bottom_right = &lidar_data[20..40];
