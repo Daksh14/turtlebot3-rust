@@ -104,6 +104,4 @@ pub async fn nav_stop(node: NavNode) {
         Ok(_) => println!("Stopping instruction sent"),
         Err(e) => eprintln!("Failed to stop the bot, this is bad {}", e),
     };
-
-    sleep(Duration::from_secs(1)).await;
 }
