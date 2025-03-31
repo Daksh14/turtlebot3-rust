@@ -1,11 +1,27 @@
 use r2r::{
-    Publisher,
+    Node, Publisher, QosProfile,
     geometry_msgs::msg::{Twist, Vector3},
 };
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use tokio::time::{Duration, sleep};
 
+type NavNode = Arc<Mutex<Node>>;
+
+pub async fn get_pub(node: NavNode) -> Publisher<Twist> {
+    let mut lock = node.lock().await;
+
+    let publisher = lock
+        .create_publisher::<Twist>("cmd_vel", QosProfile::default())
+        .unwrap();
+
+    publisher
+}
+
 // move x units in x direction and y units in y direction
-pub async fn nav_move(publisher: &Publisher<Twist>, distance_x: f64, distance_y: f64) {
+pub async fn nav_move(node: NavNode, distance_x: f64, distance_y: f64) {
+    let publisher = get_pub(node).await;
+
     let speed = 0.2;
 
     let angle = distance_y.atan2(distance_x);
@@ -48,7 +64,10 @@ pub async fn nav_move(publisher: &Publisher<Twist>, distance_x: f64, distance_y:
     sleep(Duration::from_secs(travel_time)).await;
 }
 
-pub async fn rotate360(publisher: &Publisher<Twist>) {
+pub async fn rotate360(node: NavNode) {
+    let cl = Arc::clone(&node);
+    let publisher = get_pub(cl).await;
+
     let twist = Twist {
         linear: Vector3 {
             x: 0.0,
@@ -71,10 +90,12 @@ pub async fn rotate360(publisher: &Publisher<Twist>) {
     // Sleep for time needed to reach distance
     sleep(Duration::from_secs(5)).await;
 
-    nav_stop(publisher);
+    nav_stop(node);
 }
 
-pub fn nav_stop(publisher: &Publisher<Twist>) {
+pub async fn nav_stop(node: NavNode) {
+    let publisher = get_pub(node).await;
+
     let twist = Twist {
         linear: Vector3 {
             x: 0.0,
