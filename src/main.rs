@@ -100,12 +100,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             if let Some(direction) = lidar::lidar_data(scan) {
                                 println!("Detected direction: {:?}", direction);
 
-                                if let Direction::North = direction {
-                                    println!("{:?}", direction);
+                                match direction {
+                                    Direction::North
+                                    | Direction::NorthEast
+                                    | Direction::NorthWest => {
+                                        println!("{:?}", direction);
 
-                                    nav::nav_stop(Arc::clone(&cl_2)).await;
-                                    sleep(Duration::from_secs(3)).await;
-                                    nav::nav_move(cl_2, 1.0, 0.3).await;
+                                        nav::nav_stop(Arc::clone(&cl_2)).await;
+                                        sleep(Duration::from_secs(3)).await;
+                                        nav::nav_move(cl_2, 1.0, 0.3).await;
+                                    }
+                                    _ => (),
                                 }
                             }
                         }
