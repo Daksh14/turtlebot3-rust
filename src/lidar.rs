@@ -7,6 +7,7 @@ use futures::{
 use r2r::sensor_msgs::msg::LaserScan;
 use tokio::sync::mpsc::Sender;
 
+#[derive(Debug)]
 pub enum Direction {
     North,
     NorthEast,

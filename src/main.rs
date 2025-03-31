@@ -47,18 +47,19 @@ enum Sequence {
     TrackingToCharm,
     // Charm is collected
     SharmCollected,
+    // Stop
+    Stop,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut nav_node = generate_node("nav_node")?;
+    let nav_node = Arc::new(Mutex::new(generate_node("nav_node")?));
+    let nav_node_cl = Arc::clone(&nav_node);
 
     let lidar_node = Arc::new(Mutex::new(generate_node("lidar")?));
     let liadr_node_cl = Arc::clone(&lidar_node);
 
-    let publisher = nav_node.create_publisher("/cmd_vel", QosProfile::default())?;
-
-    // Launch the lidar scan task
+    // Launch the lidar communication channel, should be done with redis? I disagree
     let (tx, mut rx) = mpsc::channel::<LaserScan>(100);
 
     tokio::spawn({
@@ -70,46 +71,64 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         lidar::lidar_scan(lidar_node_sub, tx)
     });
 
-    // this is what the bot is doing at any point in time
-    let mut current_sequence = Sequence::RandomMovement;
+    tokio::spawn(async move {
+        let nav_node_cl = Arc::clone(&nav_node_cl);
+        // this is what the bot is doing at any point in time
+        let mut current_sequence = Sequence::RandomMovement;
+
+        loop {
+            let cl = Arc::clone(&nav_node_cl);
+
+            match current_sequence {
+                Sequence::Intial360Rotation => {
+                    nav::rotate360(cl).await;
+
+                    sleep(Duration::from_secs(3)).await;
+
+                    current_sequence = Sequence::RandomMovement;
+                }
+                Sequence::RandomMovement => {
+                    let cl = Arc::clone(&cl);
+
+                    tokio::spawn(async move {
+                        nav::nav_move(cl, 10.0, 5.0).await;
+                    });
+
+                    match rx.recv().await {
+                        Some(scan) => {
+                            if let Some(direction) = lidar::lidar_data(scan) {
+                                println!("Detected direction: {:?}", direction);
+
+                                if let direction = Direction::East {
+                                    current_sequence = Sequence::Stop;
+                                }
+                            }
+                        }
+
+                        None => {}
+                    }
+                }
+                Sequence::TrackingToCharm => {
+                    // TrackingToCharm
+                }
+                Sequence::SharmCollected => {
+                    // SharmCollected
+                }
+                Sequence::Stop => {
+                    nav::nav_stop(nav_node_cl).await;
+
+                    println!("Stopping");
+
+                    break;
+                }
+            }
+        }
+    });
+
     let node_spin_dur = std::time::Duration::from_millis(100);
 
     loop {
-        match current_sequence {
-            Sequence::Intial360Rotation => {
-                nav::rotate360(&publisher).await;
-
-                sleep(Duration::from_secs(3)).await;
-
-                current_sequence = Sequence::RandomMovement;
-            }
-            Sequence::RandomMovement => {
-                nav::nav_move(&publisher, 10.0, 5.0).await;
-
-                match rx.recv().await {
-                    Some(scan) => {
-                        if let Some(direction) = lidar::lidar_data(scan) {
-                            if let direction = Direction::East {
-                                nav::nav_stop(&publisher);
-                                println!("East detected, stopping");
-                                break;
-                            }
-                        }
-                    }
-                    None => {}
-                }
-            }
-            Sequence::TrackingToCharm => {
-                // TrackingToCharm
-            }
-            Sequence::SharmCollected => {
-                // SharmCollected
-            }
-        }
-
-        nav_node.spin_once(node_spin_dur);
+        nav_node.lock().await.spin_once(node_spin_dur);
         lidar_node.lock().await.spin_once(node_spin_dur);
     }
-
-    Ok(())
 }
