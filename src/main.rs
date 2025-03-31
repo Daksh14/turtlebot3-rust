@@ -10,6 +10,7 @@ mod errors;
 mod lidar;
 
 use futures::{Stream, StreamExt};
+use lidar::Direction;
 use r2r::QosProfile;
 use r2r::sensor_msgs::msg::LaserScan;
 use r2r::{Node, Publisher};
@@ -56,9 +57,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let liadr_node_cl = Arc::clone(&lidar_node);
 
     let publisher = nav_node.create_publisher("/cmd_vel", QosProfile::default())?;
-    // 1. First instruction as the binary is run to move the bot 10 units x direction
-    // and 5 units y direction
-    nav::nav_move(&publisher, 10.0, 5.0).await;
 
     // Launch the lidar scan task
     let (tx, mut rx) = mpsc::channel::<LaserScan>(100);
@@ -73,7 +71,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // this is what the bot is doing at any point in time
-    let mut current_sequence = Sequence::Intial360Rotation;
+    let mut current_sequence = Sequence::RandomMovement;
     let node_spin_dur = std::time::Duration::from_millis(100);
 
     loop {
@@ -86,15 +84,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 current_sequence = Sequence::RandomMovement;
             }
             Sequence::RandomMovement => {
-                // nav::nav_move(&publisher, 10.0, 5.0).await;
+                nav::nav_move(&publisher, 10.0, 0.0);
 
                 match rx.recv().await {
                     Some(scan) => {
-                        lidar::lidar_data(scan);
+                        if let Some(direction) = lidar::lidar_data(scan) {
+                            if let direction = Direction::East {
+                                nav::nav_stop(&publisher);
+                                println!("East detected, stopping");
+                                break;
+                            }
+                        }
                     }
-                    None => {
-                        println!("No data received");
-                    }
+                    None => {}
                 }
             }
             Sequence::TrackingToCharm => {
