@@ -12,7 +12,7 @@ pub async fn get_pub(node: NavNode) -> Publisher<Twist> {
     let mut lock = node.lock().await;
 
     let publisher = lock
-        .create_publisher::<Twist>("cmd_vel", QosProfile::default())
+        .create_publisher::<Twist>("/cmd_vel", QosProfile::default())
         .unwrap();
 
     publisher
