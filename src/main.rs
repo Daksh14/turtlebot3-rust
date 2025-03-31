@@ -106,7 +106,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     nav::nav_stop(Arc::clone(&cl_2)).await;
                                     sleep(Duration::from_secs(3)).await;
                                     nav::nav_move(Arc::clone(&cl_2), -20.0, 0.0).await;
-                                    nav::nav_move(cl_2, 20.0, 20.0).await;
+                                    nav::nav_move(cl_2, 20.0, -20.0).await;
                                 }
                             }
                         }
