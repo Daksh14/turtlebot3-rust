@@ -101,14 +101,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 println!("Detected direction: {:?}", direction);
 
                                 match direction {
-                                    Direction::North
-                                    | Direction::NorthEast
-                                    | Direction::NorthWest => {
-                                        println!("{:?}", direction);
-
+                                    Direction::North => {
                                         nav::nav_stop(Arc::clone(&cl_2)).await;
-                                        sleep(Duration::from_secs(3)).await;
-                                        nav::nav_move(cl_2, 0.5, 0.3).await;
+                                        nav::nav_move(cl_2, 0.2, 0.3).await;
+                                    }
+                                    Direction::NorthWest => {
+                                        nav::nav_stop(Arc::clone(&cl_2)).await;
+                                        nav::nav_move(cl_2, 0.2, 0.3).await;
+                                    }
+                                    Direction::NorthEast => {
+                                        nav::nav_stop(Arc::clone(&cl_2)).await;
+                                        nav::nav_move(cl_2, 0.2, -0.3).await;
                                     }
                                     _ => (),
                                 }
