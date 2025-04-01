@@ -37,8 +37,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     libclang-dev \
     cmake \
+    libopencv-dev \
     sudo \
     build-essential \
+    gcc-arm-linux-gnueabi \
+    gcc-arm-linux-gnueabihf \
+    g++-arm-linux-gnueabi \
+    g++-arm-linux-gnueabihf \
     git \
     software-properties-common \
     wget \
@@ -71,7 +76,7 @@ RUN unzip opencv.zip && rm opencv.zip
 RUN unzip opencv_contrib.zip && rm opencv_contrib.zip
 RUN mkdir -p build && cd build
 
-RUN cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=NO \
+RUN cmake -DCMAKE_TOOLCHAIN_FILE=/opencv-4.x/platforms/linux/arm-gnueabi.toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=NO \
     -DCMAKE_INSTALL_PREFIX=/root/opencv -DBUILD_DOCS=OFF -DBUILD_EXAMPLES=OFF \
     -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_opencv_java=OFF \
     -DBUILD_opencv_python=OFF -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib-4.x/modules \
