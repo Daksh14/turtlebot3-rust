@@ -1,5 +1,5 @@
-// // Camera logic
-// mod camera;
+// Camera logic
+mod camera;
 // Navigation logic
 mod nav;
 // Graceful error handling
