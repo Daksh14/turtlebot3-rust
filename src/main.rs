@@ -5,7 +5,7 @@ mod nav;
 // Graceful error handling
 mod errors;
 // yolo module
-// mod yolo;
+mod yolo;
 // lidar module
 mod lidar;
 
