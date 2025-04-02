@@ -49,13 +49,12 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
                 last_time = Instant::now();
             }
 
-            println!("{:?}", x);
-            match yolo::detect(&mut model, &x, 0.5, 0.5) {
-                Ok(_) => {
-                    println!("Detected something");
-                }
-                _ => (),
-            }
+            // match yolo::detect(&mut model, &x, 0.5, 0.5) {
+            //     Ok(_) => {
+            //         println!("Detected something");
+            //     }
+            //     _ => (),
+            // }
         }
     }
 }
