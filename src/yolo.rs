@@ -64,7 +64,7 @@ pub fn load_model() -> Result<Model, Box<dyn Error>> {
 }
 
 fn load_model_from_config() -> Result<ModelConfig, Box<dyn Error>> {
-    let file = File::open("data/config.json"); // change the path if needed
+    let file = File::open("../data/config.json"); // change the path if needed
     let file = match file {
         Ok(file) => file,
         Err(_) => {
@@ -159,7 +159,7 @@ fn post_process(
 ) -> opencv::Result<Detections> {
     // outs: tensor float32[1, M, 8400]  M = 4 + the number of classes， 8400 anchors
     let dets = outs.get(0).unwrap(); // remove the outermost dimension
-    // dets: 1xMx8400   1 x [x_center, y_center, width, height, class_0_conf, class_1_conf, ...] x 8400
+                                     // dets: 1xMx8400   1 x [x_center, y_center, width, height, class_0_conf, class_1_conf, ...] x 8400
     let rows = *dets.mat_size().get(2).unwrap(); // 8400
     let cols = *dets.mat_size().get(1).unwrap(); // M
 
