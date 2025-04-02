@@ -10,7 +10,7 @@ use std::sync::Mutex;
 use std::time::Instant;
 
 pub async fn cam_plus_yolo_detect() -> Result<()> {
-    let mut cam = VideoCapture::new(0, videoio::CAP_XINE)?;
+    let mut cam = VideoCapture::new(0, videoio::CAP_ANY)?;
 
     let opened = VideoCapture::is_opened(&cam)?;
     let mut frame_count = 0;
@@ -22,9 +22,6 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
     if !opened {
         panic!("Unable to open default camera!");
     }
-
-    cam.set(videoio::CAP_PROP_FRAME_WIDTH, 640.0)?; // Set frame width
-    cam.set(videoio::CAP_PROP_FRAME_HEIGHT, 480.0)?;
 
     // loop {
     //     let mut frame = Mat::default();
