@@ -40,6 +40,7 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
 
     let mut frame_count = 0;
     let mut last_time = Instant::now();
+
     loop {
         if let Some(x) = rx.recv().await {
             frame_count += 1;
@@ -52,12 +53,12 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
                 last_time = Instant::now();
             }
 
-            // match yolo::detect(&mut model, &x, 0.5, 0.5) {
-            //     Ok(_) => {
-            //         println!("Detected something");
-            //     }
-            //     _ => (),
-            // }
+            match yolo::detect(&mut model, &x, 0.5, 0.5) {
+                Ok(_) => {
+                    println!("Detected something");
+                }
+                _ => (),
+            }
         }
     }
 }
