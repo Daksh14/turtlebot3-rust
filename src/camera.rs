@@ -10,7 +10,7 @@ use std::sync::Mutex;
 use std::time::Instant;
 
 pub async fn cam_plus_yolo_detect() -> Result<()> {
-    let mut cam = VideoCapture::new(0, videoio::CAP_ANY)?;
+    let mut cam = VideoCapture::new(0, videoio::CAP_VFW)?;
 
     let opened = VideoCapture::is_opened(&cam)?;
     let mut frame_count = 0;
@@ -36,10 +36,10 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
     let fps = num_frames_to_measure as f64 / fps_duration.as_secs_f64();
     println!("Measured FPS: {:?}", fps);
 
-    loop {
-        let mut frame = Mat::default();
-        cam.read(&mut frame)?;
-    }
+    // loop {
+    //     let mut frame = Mat::default();
+    //     cam.read(&mut frame)?;
+    // }
 
     // tokio::spawn({
     //     loop {
@@ -52,15 +52,15 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
     //     }
     // })
 
-    // loop {
-    //     frame_count += 1;
+    loop {
+        frame_count += 1;
 
-    //     let elapsed = last_time.elapsed();
-    //     if elapsed.as_secs() >= 1 {
-    //         let fps = frame_count as f64 / elapsed.as_secs_f64();
-    //         println!("FPS: {:.2}", fps);
-    //         frame_count = 0;
-    //         last_time = Instant::now();
-    //     }
-    // }
+        let elapsed = last_time.elapsed();
+        if elapsed.as_secs() >= 1 {
+            let fps = frame_count as f64 / elapsed.as_secs_f64();
+            println!("FPS: {:.2}", fps);
+            frame_count = 0;
+            last_time = Instant::now();
+        }
+    }
 }
