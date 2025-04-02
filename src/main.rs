@@ -51,19 +51,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (lidar_tx, lidar_rx) = mpsc::channel::<LaserScan>(100);
 
     // lidar process
-    tokio::spawn(lidar::lidar_scan(liadr_node_cl, lidar_tx));
+    // tokio::spawn(lidar::lidar_scan(liadr_node_cl, lidar_tx));
 
     // camera process + yolo detect
     tokio::spawn(camera::cam_plus_yolo_detect());
 
     // navigation process
-    tokio::spawn(async move {
-        let nav_node_cl = Arc::clone(&nav_node_cl);
-        // this is what the bot is doing at any point in time
-        let start_sequence = Sequence::Stop;
+    // tokio::spawn(async move {
+    //     let nav_node_cl = Arc::clone(&nav_node_cl);
+    //     // this is what the bot is doing at any point in time
+    //     let start_sequence = Sequence::Stop;
 
-        nav::move_process(start_sequence, nav_node_cl, lidar_rx)
-    });
+    //     nav::move_process(start_sequence, nav_node_cl, lidar_rx)
+    // });
 
     loop {
         nav_node.lock().await.spin_once(node_spin_dur);
