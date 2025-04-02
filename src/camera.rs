@@ -43,6 +43,9 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
     // })
 
     loop {
+        let mut frame = Mat::default();
+        cam.read(&mut frame)?;
+
         frame_count += 1;
 
         let elapsed = last_time.elapsed();
