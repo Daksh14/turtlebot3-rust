@@ -26,12 +26,13 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
         panic!("Unable to open default camera!");
     }
 
-    tokio::spawn(async move {
+    std::thread::spawn(move || {
         loop {
             let mut frame = Mat::default();
             cam.read(&mut frame).expect("should be able to read frame");
 
-            tx.send(frame).await.expect("Should be able to send frame");
+            tx.blocking_send(frame)
+                .expect("Should be able to send frame");
         }
     });
 
@@ -41,9 +42,7 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
                 Ok(_) => {
                     println!("Detected something");
                 }
-                Err(e) => {
-                    println!("error in deteching {:?}", e);
-                }
+                _ => (),
             }
         }
     }
