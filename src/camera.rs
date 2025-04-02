@@ -45,8 +45,8 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
     //     }
     // })
 
-    let mut frame = Mat::default();
     loop {
+        let mut frame = Mat::default();
         cam.read(&mut frame)?;
 
         frame_count += 1;
