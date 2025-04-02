@@ -29,25 +29,12 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
     }
 
     std::thread::spawn(move || {
-        let mut frame_count = 0;
-        let mut last_time = Instant::now();
-
         loop {
             let mut frame = Mat::default();
             cam.read(&mut frame).expect("should be able to read frame");
 
             tx.blocking_send(frame)
                 .expect("Should be able to send frame");
-
-            frame_count += 1;
-            let elapsed = last_time.elapsed();
-
-            if elapsed.as_secs() >= 1 {
-                let fps = frame_count as f64 / elapsed.as_secs_f64();
-                println!("real FPS: {:.2}", fps);
-                frame_count = 0;
-                last_time = Instant::now();
-            }
         }
     });
 
@@ -65,12 +52,12 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
                 last_time = Instant::now();
             }
 
-            match yolo::detect(&mut model, &x, 0.5, 0.5) {
-                Ok(_) => {
-                    println!("Detected something");
-                }
-                _ => (),
-            }
+            // match yolo::detect(&mut model, &x, 0.5, 0.5) {
+            //     Ok(_) => {
+            //         println!("Detected something");
+            //     }
+            //     _ => (),
+            // }
         }
     }
 }
