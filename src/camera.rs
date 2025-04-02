@@ -14,10 +14,9 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
 
     let fourcc = VideoWriter::fourcc('m', 'j', 'p', 'g')?;
 
-    cam.set(videoio::CAP_PROP_FRAME_WIDTH, 640.0)?;
-    cam.set(videoio::CAP_PROP_FRAME_HEIGHT, 480.0)?;
-    cam.set(videoio::CAP_PROP_CONVERT_RGB, 0.0)?;
-    cam.set(videoio::CAP_PROP_FOURCC, fourcc as f64)?;
+    // cam.set(videoio::CAP_PROP_FRAME_WIDTH, 640.0)?;
+    // cam.set(videoio::CAP_PROP_FRAME_HEIGHT, 480.0)?;
+    // cam.set(videoio::CAP_PROP_FOURCC, fourcc as f64)?;
 
     let opened = VideoCapture::is_opened(&cam)?;
     let mut frame_count = 0;
