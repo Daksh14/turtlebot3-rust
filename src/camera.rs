@@ -25,11 +25,23 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
     }
 
     tokio::spawn(async move {
+        let mut frame_count = 0;
+        let mut last_time = Instant::now();
+
         loop {
             let mut frame = Mat::default();
             cam.read(&mut frame).expect("should be able to read frame");
 
             tx.send(frame).await.expect("Should be able to send frame");
+
+            frame_count += 1;
+            let elapsed = last_time.elapsed();
+            if elapsed.as_secs() >= 1 {
+                let fps = frame_count as f64 / elapsed.as_secs_f64();
+                println!("true camera FPS: {:.2}", fps);
+                frame_count = 0;
+                last_time = Instant::now();
+            }
         }
     });
 
@@ -44,7 +56,7 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
             let elapsed = last_time.elapsed();
             if elapsed.as_secs() >= 1 {
                 let fps = frame_count as f64 / elapsed.as_secs_f64();
-                println!("FPS: {:.2}", fps);
+                println!("recving FPS: {:.2}", fps);
                 frame_count = 0;
                 last_time = Instant::now();
             }
