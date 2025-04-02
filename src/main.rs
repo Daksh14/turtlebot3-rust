@@ -75,6 +75,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         loop {
             match rx_cam.recv().await {
                 Some(x) => {
+                    println!("Recived camera data!");
                     if let Ok(x) = yolo::detect(&mut model, &x, 0.5, 0.5) {
                         println!("Found something!");
                     }
