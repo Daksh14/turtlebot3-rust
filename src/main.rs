@@ -17,6 +17,7 @@ use r2r::{Node, Publisher};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::sync::mpsc;
+use opencv::prelude::*;
 use tokio::time::{Duration, sleep};
 
 // generate a node with a given name and namespace is set to turtlemove statically
@@ -26,17 +27,6 @@ pub fn generate_node(name: &str) -> r2r::Result<Node> {
     let node = r2r::Node::create(ctx, name, name_space)?;
 
     Ok(node)
-}
-
-// mutate a node in place to subscribe and publish to topic
-pub fn create_pub_sub<T: r2r::WrappedTypesupport + 'static>(
-    node: &mut r2r::Node,
-    topic: &str,
-) -> r2r::Result<(Publisher<T>, impl Stream<Item = T>)> {
-    let subscriber = node.subscribe(topic, QosProfile::default())?;
-    let publisher = node.create_publisher(topic, QosProfile::default())?;
-
-    Ok((publisher, subscriber))
 }
 
 enum Sequence {
@@ -61,7 +51,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Launch the lidar communication channel, should be done with redis? I disagree
     let (tx, mut rx) = mpsc::channel::<LaserScan>(100);
+    let (tx_cam, mut rx_cam) = mpsc::channel::<Mat>(100);
 
+    // lidar process
     tokio::spawn({
         let mut lock = liadr_node_cl.lock().await;
         // subscribe to lidar node
@@ -69,6 +61,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let lidar_node_sub = lock.subscribe("/scan", qos).unwrap().boxed();
 
         lidar::lidar_scan(lidar_node_sub, tx)
+    });
+
+    // camera process
+    tokio::spawn({
+        crate::camera::camera_process(tx_cam)
+    });
+
+    tokio::spawn(async move {
+        // load the yolo model
+        let mut model = yolo::load_model().expect("The model should load");
+
+        loop {
+            match rx_cam.recv().await {
+                Some(x) => {
+                    if let Ok(x) = yolo::detect(&mut model, &x, 0.5, 0.5) {
+                        println!("Found something!");
+                    }
+                },
+                None => {},
+            }
+        }
+
+
     });
 
     tokio::spawn(async move {
@@ -91,35 +106,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let cl = Arc::clone(&cl);
                     let cl_2 = Arc::clone(&cl);
 
-                    tokio::spawn(async move {
-                        nav::nav_move(cl, 0.5, 0.0).await;
-                    });
+                    // tokio::spawn(async move {
+                    //     nav::nav_move(cl, 0.5, 0.0).await;
+                    // });
 
-                    match rx.recv().await {
-                        Some(scan) => {
-                            if let Some(direction) = lidar::lidar_data(scan) {
-                                println!("Detected direction: {:?}", direction);
+                    // match rx.recv().await {
+                    //     Some(scan) => {
+                    //         if let Some(direction) = lidar::lidar_data(scan) {
+                    //             println!("Detected direction: {:?}", direction);
 
-                                match direction {
-                                    Direction::North => {
-                                        nav::nav_stop(Arc::clone(&cl_2)).await;
-                                        nav::nav_move(cl_2, 0.2, 0.3).await;
-                                    }
-                                    Direction::NorthWest => {
-                                        nav::nav_stop(Arc::clone(&cl_2)).await;
-                                        nav::nav_move(cl_2, 0.2, 0.3).await;
-                                    }
-                                    Direction::NorthEast => {
-                                        nav::nav_stop(Arc::clone(&cl_2)).await;
-                                        nav::nav_move(cl_2, 0.2, -0.3).await;
-                                    }
-                                    _ => (),
-                                }
-                            }
-                        }
-
-                        None => {}
-                    }
+                    //             match direction {
+                    //                 Direction::North => {
+                    //                     nav::nav_stop(Arc::clone(&cl_2)).await;
+                    //                     nav::nav_move(cl_2, 0.2, 0.3).await;
+                    //                 }
+                    //                 Direction::NorthWest => {
+                    //                     nav::nav_stop(Arc::clone(&cl_2)).await;
+                    //                     nav::nav_move(cl_2, 0.2, 0.3).await;
+                    //                 }
+                    //                 Direction::NorthEast => {
+                    //                     nav::nav_stop(Arc::clone(&cl_2)).await;
+                    //                     nav::nav_move(cl_2, 0.2, -0.3).await;
+                    //                 }
+                    //                 _ => (),
+                    //             }
+                    //         }
+                    //     }
+// 
+                        // None => {}
+                    // }
                 }
                 Sequence::TrackingToCharm => {
                     // TrackingToCharm
