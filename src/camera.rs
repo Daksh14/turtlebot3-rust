@@ -33,8 +33,22 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
         }
     });
 
+    use std::time::Instant;
+
+    let mut frame_count = 0;
+    let mut last_time = Instant::now();
+
     loop {
         if let Some(x) = rx.recv().await {
+            frame_count += 1;
+            let elapsed = last_time.elapsed();
+            if elapsed.as_secs() >= 1 {
+                let fps = frame_count as f64 / elapsed.as_secs_f64();
+                println!("FPS: {:.2}", fps);
+                frame_count = 0;
+                last_time = Instant::now();
+            }
+
             println!("{:?}", x);
             match yolo::detect(&mut model, &x, 0.5, 0.5) {
                 Ok(_) => {
