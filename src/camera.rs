@@ -10,7 +10,7 @@ use std::sync::Mutex;
 use std::time::Instant;
 
 pub async fn cam_plus_yolo_detect() -> Result<()> {
-    let mut cam = VideoCapture::new(0, videoio::CAP_QT)?;
+    let mut cam = VideoCapture::new(0, videoio::CAP_DSHOW)?;
 
     let opened = VideoCapture::is_opened(&cam)?;
     let mut frame_count = 0;
