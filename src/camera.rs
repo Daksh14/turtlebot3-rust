@@ -33,14 +33,5 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
             frame_count = 0;
             last_time = Instant::now();
         }
-
-        match yolo::detect(&mut model, &frame, 0.5, 0.5) {
-            Ok(_) => {
-                println!("Found something!");
-            }
-            Err(e) => {
-                println!("Err {:?}", e);
-            }
-        }
     }
 }
