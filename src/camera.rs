@@ -12,11 +12,11 @@ use std::time::Instant;
 pub async fn cam_plus_yolo_detect() -> Result<()> {
     let mut cam = VideoCapture::new(0, videoio::CAP_GSTREAMER)?;
 
-    let fourcc = VideoWriter::fourcc('m', 'j', 'p', 'g')?;
+    let fourcc = VideoWriter::fourcc('M', 'J', 'P', 'G')?;
 
     // cam.set(videoio::CAP_PROP_FRAME_WIDTH, 640.0)?;
     // cam.set(videoio::CAP_PROP_FRAME_HEIGHT, 480.0)?;
-    // cam.set(videoio::CAP_PROP_FOURCC, fourcc as f64)?;
+    cam.set(videoio::CAP_PROP_FOURCC, fourcc as f64)?;
 
     let opened = VideoCapture::is_opened(&cam)?;
     let mut frame_count = 0;
@@ -45,8 +45,8 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
     //     }
     // })
 
+    let mut frame = Mat::default();
     loop {
-        let mut frame = Mat::default();
         cam.read(&mut frame)?;
 
         frame_count += 1;
