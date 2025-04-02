@@ -1,7 +1,7 @@
 use opencv::prelude::*;
 use opencv::{
     Result,
-    videoio::{self, VideoCapture},
+    videoio::{self, VideoCapture, VideoWriter},
 };
 
 use crate::yolo;
@@ -12,8 +12,11 @@ use std::time::Instant;
 pub async fn cam_plus_yolo_detect() -> Result<()> {
     let mut cam = VideoCapture::new(0, videoio::CAP_ANY)?;
 
+    let fourcc = VideoWriter::fourcc('h', '2', '6', '4')?;
+
     cam.set(videoio::CAP_PROP_FRAME_WIDTH, 640.0)?;
     cam.set(videoio::CAP_PROP_FRAME_HEIGHT, 480.0)?;
+    cam.set(videoio::CAP_PROP_FOURCC, fourcc as f64)?;
 
     let opened = VideoCapture::is_opened(&cam)?;
     let mut frame_count = 0;
