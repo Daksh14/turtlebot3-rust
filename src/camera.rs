@@ -1,12 +1,20 @@
 use opencv::prelude::*;
-use opencv::{videoio::{VideoCapture, self}, Result};
-use opencv::core::OpenCLInitError;
+use opencv::{
+    Result,
+    videoio::{self, VideoCapture},
+};
 
-use tokio::sync::mpsc::Sender;
+use crate::yolo;
 
-pub async fn camera_process(tx: Sender<Mat>) -> Result<()> {
+use std::time::Instant;
+
+pub async fn cam_plus_yolo_detect() -> Result<()> {
     let mut cam = VideoCapture::new(0, videoio::CAP_ANY)?;
     let opened = VideoCapture::is_opened(&cam)?;
+    let mut frame_count = 0;
+    let mut last_time = Instant::now();
+    // load the yolo model
+    let mut model = yolo::load_model().expect("The model should load");
 
     if !opened {
         panic!("Unable to open default camera!");
@@ -16,13 +24,23 @@ pub async fn camera_process(tx: Sender<Mat>) -> Result<()> {
         let mut frame = Mat::default();
         cam.read(&mut frame)?;
 
-        if let Err(e) = tx.send(frame).await {
-            println!("receiver dropped for camera: {}", e);
+        frame_count += 1;
 
-            return Err(opencv::error::Error {
-                code: OpenCLInitError,
-                message: String::from("Camera reading is stopped"),
-            });
+        let elapsed = last_time.elapsed();
+        if elapsed.as_secs() >= 1 {
+            let fps = frame_count as f64 / elapsed.as_secs_f64();
+            println!("FPS: {:.2}", fps);
+            frame_count = 0;
+            last_time = Instant::now();
+        }
+
+        match yolo::detect(&mut model, &frame, 0.5, 0.5) {
+            Ok(_) => {
+                println!("Found something!");
+            }
+            Err(e) => {
+                println!("Err {:?}", e);
+            }
         }
     }
 }

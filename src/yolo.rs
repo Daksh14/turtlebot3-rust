@@ -23,6 +23,7 @@ pub struct Detections {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct ModelConfig {
     // refer to the `data/config.json`
     pub model_path: String,       // ONNX model absolute path
@@ -240,31 +241,4 @@ fn post_process(
     Ok(Detections {
         detections: final_boxes,
     })
-}
-
-pub fn draw_predictions(img: &mut Mat, detections: &Detections, model_config: &ModelConfig) {
-    let boxes = &detections.detections;
-
-    for i in 0..boxes.len() {
-        let bbox = &boxes[i];
-        let rect = Rect::new(
-            bbox.xmin,
-            bbox.ymin,
-            bbox.xmax - bbox.xmin,
-            bbox.ymax - bbox.ymin,
-        );
-        let label = model_config.class_names.get(bbox.class as usize).unwrap();
-
-        // change according to your needs
-        if label == "person" {
-            let box_color = core::Scalar::new(0.0, 255.0, 0.0, 0.0); // green color
-            opencv::imgproc::rectangle(img, rect, box_color, 2, opencv::imgproc::LINE_8, 0)
-                .unwrap();
-        } else if label == "bicycle" {
-            let box_color = core::Scalar::new(0.0, 165.0, 255.0, 0.0); // orange color
-            opencv::imgproc::rectangle(img, rect, box_color, 2, opencv::imgproc::LINE_8, 0)
-                .unwrap();
-        }
-        // ... other classes
-    }
 }
