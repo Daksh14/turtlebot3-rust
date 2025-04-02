@@ -56,6 +56,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // camera process + yolo detect
     tokio::spawn(camera::cam_plus_yolo_detect());
 
+    // supersonic sensor process
+    let supersonic_node = Arc::new(Mutex::new(generate_node("supersonic")?));
+    let supersonic_node_cl = Arc::clone(&supersonic_node);
+
+    // channel for supersonic sensor readings
+    let (supersonic_tx, supersonic_rx) = mpsc::channel::<f32>(100);
+
+    tokio::spawn(async move {
+        let mut node = supersonic_node_cl.lock().await;
+        let publisher = node.create_publisher::<std_msgs::msg::Float32>("supersonic_distance", r2r::QosProfile::default())?;
+        
+        loop {
+            // read from the supersonic sensor
+            if let Ok(distance) = supersonic_rx.try_recv() {
+                let mut msg = std_msgs::msg::Float32::default();
+
+                msg.data = distance;
+                publisher.publish(&msg)?;
+
+                // basic check, change later
+                if distance < 0.3 { // 30cm 
+                    println!("Warning: Obstacle detected at {:.2}m", distance);
+                }
+            }
+            else {
+                println!("No supersonic sensor reading available! Error: {:?}", error);
+            }
+
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        }
+    });
+
     // navigation process
     tokio::spawn(async move {
         let nav_node_cl = Arc::clone(&nav_node_cl);
@@ -68,5 +100,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     loop {
         nav_node.lock().await.spin_once(node_spin_dur);
         lidar_node.lock().await.spin_once(node_spin_dur);
+        supersonic_node.lock().await.spin_once(node_spin_dur);
     }
 }
