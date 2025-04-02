@@ -1,11 +1,13 @@
 use std::f32;
+use std::sync::Arc;
 
-use futures::{
-    Stream, future,
-    stream::{BoxStream, StreamExt},
-};
+use futures::stream::StreamExt;
+use r2r::QosProfile;
 use r2r::sensor_msgs::msg::LaserScan;
+use tokio::sync::Mutex;
 use tokio::sync::mpsc::Sender;
+
+type LidarNode = Arc<Mutex<r2r::Node>>;
 
 #[derive(Debug)]
 pub enum Direction {
@@ -19,15 +21,23 @@ pub enum Direction {
     NorthWest,
 }
 
-pub async fn lidar_scan<'a>(stream: BoxStream<'a, LaserScan>, tx: Sender<LaserScan>) {
-    // block and keep recivin messages
-    let mut stream = stream;
+pub async fn lidar_scan(lidar_node: LidarNode, tx: Sender<LaserScan>) {
+    let mut lock = lidar_node.lock().await;
+    // subscribe to lidar node
+    let qos = QosProfile::default().best_effort();
+    let mut lidar_node_sub = lock
+        .subscribe("/scan", qos)
+        .expect("Subscribing to lidar should work");
 
-    while let Some(message) = stream.next().await {
-        if let Err(e) = tx.send(message).await {
-            println!("receiver dropped: {}", e);
-
-            return;
+    loop {
+        match lidar_node_sub.next().await {
+            Some(msg) => {
+                if let Err(_) = tx.send(msg).await {
+                    break;
+                }
+            }
+            // dont do anything if we dont get any lidar data
+            None => (),
         }
     }
 }
