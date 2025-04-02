@@ -12,7 +12,7 @@ use std::time::Instant;
 pub async fn cam_plus_yolo_detect() -> Result<()> {
     let mut cam = VideoCapture::new(0, videoio::CAP_GSTREAMER)?;
 
-    let fourcc = VideoWriter::fourcc('M', 'J', 'P', 'G')?;
+    let fourcc = VideoWriter::fourcc('m', 'j', 'p', 'g')?;
 
     cam.set(videoio::CAP_PROP_FRAME_WIDTH, 640.0)?;
     cam.set(videoio::CAP_PROP_FRAME_HEIGHT, 480.0)?;
