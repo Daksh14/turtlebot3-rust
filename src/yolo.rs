@@ -120,7 +120,7 @@ pub fn detect(model_data: &mut Model, img: Frame) -> Result<(), Box<dyn std::err
             .reduce(|accum, row| if row.1 > accum.1 { row } else { accum })
             .unwrap();
 
-        if prob < 0.7 {
+        if prob < 0.5 {
             continue;
         }
 
