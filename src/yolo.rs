@@ -1,14 +1,16 @@
 // yolo.rs
 use ndarray::{s, Array, ArrayViewD, Axis};
-use opencv::{core::MatTraitConst, prelude::*};
 use ort::{
     inputs,
     session::{builder::SessionBuilder, Session, SessionOutputs},
-    value::Tensor,
+    value::{Tensor, TensorValueType, Value},
 };
 use serde::{Deserialize, Serialize};
 
+use core::error;
 use std::{error::Error, fs::File, io::BufReader};
+
+pub type Frame = Value<TensorValueType<f32>>;
 
 const YOLOV8_CLASS_LABELS: [&str; 10] = [
     "blue cone",
@@ -93,46 +95,15 @@ fn load_model_from_config() -> Result<ModelConfig, Box<dyn Error>> {
 }
 
 // yolo.rs
-pub fn detect(model_data: &mut Model, img: &Mat) -> opencv::Result<()> {
-    let from = img;
-
-    if !from.is_continuous() {
-        panic!("needs to be continous");
-    }
-
-    let size = from.mat_size();
-    let size = size.iter().map(|&dim| dim as usize);
-    let channels = from.channels() as usize;
-
-    let size_and_channel = size.chain([channels]);
-    let size_with_depth: Vec<usize> = [1].into_iter().chain(size_and_channel).collect();
-
-    let numel = size_with_depth.iter().product();
-    let ptr = from.ptr(0)? as *const _;
-
-    let slice = unsafe { std::slice::from_raw_parts(ptr, numel) };
-
-    let src_shape = size_with_depth;
-    let mut array = ArrayViewD::from_shape(src_shape, slice).expect("arr view should be made");
-
-    let array = array.permuted_axes(Vec::from([0, 3, 1, 2]));
-    // swap height and width in case
-    // array.swap_axes(2, 3);
-
-    let array = array.mapv(|f| f as f32);
+pub fn detect(model_data: &mut Model, img: Frame) -> Result<(), Box<dyn std::error::Error>> {
 
     let model = &mut model_data.model;
-
-    let tensor = Tensor::from_array(array).expect("tensor building should work");
-
-    let model_inputs = inputs!["images" => tensor].expect("Input should work");
+    let model_inputs = inputs![img]?;
     let outputs = model
-        .run(model_inputs)
-        .expect("Model inference should work");
+        .run(model_inputs)?;
 
     let output = outputs["output0"]
-        .try_extract_tensor::<f32>()
-        .expect("extracting should work")
+        .try_extract_tensor::<f32>()?
         .t()
         .into_owned();
 
@@ -156,7 +127,10 @@ pub fn detect(model_data: &mut Model, img: &Mat) -> opencv::Result<()> {
             continue;
         }
 
+
         let label = YOLOV8_CLASS_LABELS[class_id];
+        
+        println!("{:?}", label);
         let xc = row[0] / 640. * (img_width as f32);
         let yc = row[1] / 640. * (img_height as f32);
         let w = row[2] / 640. * (img_width as f32);
