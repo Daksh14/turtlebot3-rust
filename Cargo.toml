@@ -6,10 +6,11 @@ edition = "2024"
 [dependencies]
 r2r = "0.9"                                        # Use the latest version
 tokio = { version = "1", features = ["full"] }
-opencv = { version = "0.93.3", default-features=false, features = ["clang-runtime", "dnn", "imgproc", "videoio"] }                                    # you may adjust the version according to system library
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 futures = "0.3.31"
+ndarray = "0.16"
+ort = "2.0.0-rc.9"
 
 [profile.release]
 lto = "fat"
