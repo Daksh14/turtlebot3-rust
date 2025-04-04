@@ -51,11 +51,8 @@ impl resize::PixelFormat for U8ToF32 {
     }
 }
 
-
 pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
     let mut model = yolo::load_model().expect("The model should load");
-
-    let cameras = query(ApiBackend::Auto).unwrap();
 
     let format = RequestedFormat::with_formats(
         RequestedFormatType::AbsoluteHighestFrameRate,
@@ -92,7 +89,7 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
     // let img = img.to_rgb32f();
 
     // let raw = img.clone().into_vec();
-        
+
     // {
     //     let (_, resized_input_buffer) = xy.extract_raw_tensor_mut();
 
