@@ -77,7 +77,7 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
     let mut resized_input = Tensor::from_array(([1i64, 3, 640, 640], vec![0_f32; 3 * 640 * 640]))
         .expect("Should construct tensor");
 
-    let mut resizer = resize::new(width, height, 640, 640, U8ToF32, resize::Type::Lanczos3)
+    let mut resizer = resize::new(width, height, 640, 640, U8ToF32, resize::Type::Gaussian)
         .expect("resizer should init");
 
     camera.open_stream().expect("Stream should start");
