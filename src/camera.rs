@@ -106,46 +106,45 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
     let (tx, mut rx) = mpsc::channel::<Buffer>(1000);
 
     std::thread::spawn(move || {
+        let mut frame_count = 0;
+        let mut last_time = Instant::now();
+
         loop {
-            if let Some(buffer) = rx.blocking_recv() {
-                buffer
-                    .decode_image_to_buffer::<RgbFormat>(&mut input_img_buffer)
-                    .expect("decoding imgae to buffer should work");
+            let buffer = camera.frame().expect("frame should be retrievable");
 
-                {
-                    let (_, resized_input_buffer) = resized_input.extract_raw_tensor_mut();
+            tx.blocking_send(buffer)
+                .expect("Should be able to send over channel");
 
-                    resizer
-                        .resize(input_img_buffer.as_rgb(), resized_input_buffer.as_rgb_mut())
-                        .expect("resize should work");
-                }
+            frame_count += 1;
+            let elapsed = last_time.elapsed();
 
-                match yolo::detect(&mut model, resized_input.view()) {
-                    Ok(_) => (),
-                    Err(e) => println!("err: {:?}", e),
-                }
+            if elapsed.as_secs() >= 1 {
+                let fps = frame_count as f64 / elapsed.as_secs_f64();
+                println!("FPS: {:.2}", fps);
+                frame_count = 0;
+                last_time = Instant::now();
             }
         }
     });
 
-    let mut frame_count = 0;
-    let mut last_time = Instant::now();
-
     loop {
-        let buffer = camera.frame().expect("frame should be retrievable");
+        if let Some(buffer) = rx.recv().await {
+            buffer
+                .decode_image_to_buffer::<RgbFormat>(&mut input_img_buffer)
+                .expect("decoding imgae to buffer should work");
 
-        tx.send(buffer)
-            .await
-            .expect("Should be able to send over channel");
+            {
+                let (_, resized_input_buffer) = resized_input.extract_raw_tensor_mut();
 
-        frame_count += 1;
-        let elapsed = last_time.elapsed();
+                resizer
+                    .resize(input_img_buffer.as_rgb(), resized_input_buffer.as_rgb_mut())
+                    .expect("resize should work");
+            }
 
-        if elapsed.as_secs() >= 1 {
-            let fps = frame_count as f64 / elapsed.as_secs_f64();
-            println!("FPS: {:.2}", fps);
-            frame_count = 0;
-            last_time = Instant::now();
+            match yolo::detect(&mut model, resized_input.view()) {
+                Ok(_) => (),
+                Err(e) => println!("err: {:?}", e),
+            }
         }
     }
 }
