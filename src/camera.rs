@@ -121,7 +121,7 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
                 }
 
                 match yolo::detect(&mut model, resized_input.view()) {
-                    Ok(_) => println!("detected"),
+                    Ok(_) => (),
                     Err(e) => println!("err: {:?}", e),
                 }
             }
