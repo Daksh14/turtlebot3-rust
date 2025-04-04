@@ -65,7 +65,7 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
     camera
         .set_resolution(Resolution {
             width_x: 640,
-            height_y: 480,
+            height_y: 360,
         })
         .expect("setting res should work");
 
