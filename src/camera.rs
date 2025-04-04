@@ -3,7 +3,9 @@ use nokhwa::{
     Buffer, CallbackCamera, Camera, nokhwa_initialize,
     pixel_format::{RgbAFormat, RgbFormat},
     query,
-    utils::{ApiBackend, CameraIndex, FrameFormat, RequestedFormat, RequestedFormatType},
+    utils::{
+        ApiBackend, CameraIndex, FrameFormat, RequestedFormat, RequestedFormatType, Resolution,
+    },
 };
 use ort::value::{Tensor, Value};
 use resize::Pixel::RGB8;
@@ -63,9 +65,14 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
         Camera::with_backend(CameraIndex::Index(0), format, ApiBackend::Video4Linux)
             .expect("Constructing camera should succeed");
 
+    camera.set_resolution(Resolution {
+        width_x: 640,
+        height_y: 640,
+    });
+
     let res = camera.resolution();
 
-    let mut input_img_buffer = vec![0u8; 640 as usize * 640 as usize * 3];
+    let mut input_img_buffer = vec![0u8; res.width() as usize * res.height() as usize * 3];
     let mut resized_input = Tensor::from_array(([1i64, 3, 640, 640], vec![0_f32; 3 * 640 * 640]))
         .expect("Should construct tensor");
 
