@@ -132,7 +132,7 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
 
                 match yolo::detect(&mut model, resized_input.view()) {
                     Ok(_) => println!("detected"),
-                    _ => (),
+                    Err(e) => println!("err: {:?}", e),
                 }
             }
         }
@@ -158,6 +158,4 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
             last_time = Instant::now();
         }
     }
-
-    Ok(())
 }
