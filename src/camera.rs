@@ -65,22 +65,29 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
         Camera::with_backend(CameraIndex::Index(0), format, ApiBackend::Video4Linux)
             .expect("Constructing camera should succeed");
 
-    camera.set_resolution(Resolution {
-        width_x: 640,
-        height_y: 640,
-    });
+    camera
+        .set_resolution(Resolution {
+            width_x: 640,
+            height_y: 640,
+        })
+        .expect("setting res should work");
 
     let res = camera.resolution();
+    let width = res.width() as usize;
+    let height = res.height() as usize;
 
-    let mut input_img_buffer = vec![0u8; res.width() as usize * res.height() as usize * 3];
-    let mut resized_input = Tensor::from_array(([1i64, 3, 640, 640], vec![0_f32; 3 * 640 * 640]))
-        .expect("Should construct tensor");
+    let mut input_img_buffer = vec![0u8; width * height * 3];
+    let mut resized_input = Tensor::from_array((
+        [1i64, 3, width as i64, height as i64],
+        vec![0_f32; 3 * width * height],
+    ))
+    .expect("Should construct tensor");
 
     let mut resizer = resize::new(
-        640 as usize,
-        640 as usize,
-        640,
-        640,
+        width,
+        height,
+        width,
+        height,
         U8ToF32,
         resize::Type::Triangle,
     )
@@ -114,7 +121,7 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
     std::thread::spawn(move || {
         if let Some(buffer) = rx.blocking_recv() {
             buffer
-                .decode_image_to_buffer::<RgbFormat>(&mut input_img_buffer)
+                .decode_image_to_buffer::<RgbAFormat>(&mut input_img_buffer)
                 .expect("decoding imgae to buffer should work");
 
             {
