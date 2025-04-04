@@ -64,7 +64,7 @@ pub fn load_model() -> Result<Model, Box<dyn Error>> {
 }
 
 fn load_model_from_config() -> Result<ModelConfig, Box<dyn Error>> {
-    let file = File::open("./data/config.json"); // change the path if needed
+    let file = File::open("../data/config.json"); // change the path if needed
     let file = match file {
         Ok(file) => file,
         Err(e) => {
