@@ -114,12 +114,13 @@ pub fn detect(model_data: &mut Model, img: Frame) -> Result<(), Box<dyn std::err
         let (class_id, prob) = row
             .iter()
             // skip bounding box coordinates
+            .skip(4)
             .enumerate()
             .map(|(index, value)| (index, *value))
             .reduce(|accum, row| if row.1 > accum.1 { row } else { accum })
             .unwrap();
 
-        if prob < 0.5 {
+        if prob < 0.7 {
             continue;
         }
 
