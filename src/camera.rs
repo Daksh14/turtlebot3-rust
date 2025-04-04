@@ -1,8 +1,3 @@
-use opencv::prelude::*;
-use opencv::{
-    Result,
-    videoio::{self, VideoCapture, VideoWriter},
-};
 use tokio::sync::mpsc;
 
 use std::time::Instant;
@@ -22,6 +17,11 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
 
     // load the yolo model
     let mut model = yolo::load_model().expect("The model should load");
+    // let img_path = "./data/test.jpg"; // change the path if needed
+    // let img = imgcodecs::imread(img_path, imgcodecs::IMREAD_COLOR)?;
+
+    // println!("yolo detect test {:?}", yolo::detect(&mut model, &img));
+
     let (tx, mut rx) = mpsc::channel::<Mat>(100);
 
     if !opened {
@@ -35,6 +35,7 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
 
             tx.blocking_send(frame)
                 .expect("Should be able to send frame");
+            // currently getting 30 frames per second here
         }
     });
 
@@ -53,7 +54,8 @@ pub async fn cam_plus_yolo_detect() -> Result<()> {
                 last_time = Instant::now();
             }
 
-            match yolo::detect(&mut model, &x, 0.5, 0.5) {
+            // we're getting 1 fps here because of the yolo model inference
+            match yolo::detect(&mut model, &x) {
                 Ok(_) => {
                     println!("Detected something");
                 }

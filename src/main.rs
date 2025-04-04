@@ -101,9 +101,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         let nav_node_cl = Arc::clone(&nav_node_cl);
         // this is what the bot is doing at any point in time
-        let start_sequence = Sequence::Stop;
+        let start_sequence = Sequence::RandomMovement;
 
-        nav::move_process(start_sequence, nav_node_cl, lidar_rx)
+        nav::move_process(start_sequence, nav_node_cl, lidar_rx).await
     });
 
     loop {

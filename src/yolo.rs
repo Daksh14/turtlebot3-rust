@@ -1,11 +1,27 @@
 // yolo.rs
-use opencv::{
-    core::{self, MatExprTraitConst, MatTraitConst},
-    core::{Mat, Rect, Vector},
-    dnn::{self, NetTrait, NetTraitConst},
+use ndarray::{s, Array, ArrayViewD, Axis};
+use opencv::{core::MatTraitConst, prelude::*};
+use ort::{
+    inputs,
+    session::{builder::SessionBuilder, Session, SessionOutputs},
+    value::Tensor,
 };
 use serde::{Deserialize, Serialize};
+
 use std::{error::Error, fs::File, io::BufReader};
+
+const YOLOV8_CLASS_LABELS: [&str; 10] = [
+    "blue cone",
+    "cow",
+    "football",
+    "green cone",
+    "mouse",
+    "orange cone",
+    "picFrame",
+    "purple cone",
+    "robot",
+    "yellow cone",
+];
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BoxDetection {
@@ -32,44 +48,24 @@ pub struct ModelConfig {
 }
 
 pub struct Model {
-    pub model: dnn::Net, // we will use OpenCV dnn module to load the ONNX model
-    pub model_config: ModelConfig,
-}
-
-#[derive(Debug)]
-pub struct MatInfo {
-    width: f32,       // original image width
-    height: f32,      // original image height
-    scaled_size: f32, // effective size fed into the model
+    pub model: Session,
 }
 
 pub fn load_model() -> Result<Model, Box<dyn Error>> {
     let model_config = load_model_from_config().unwrap();
-    let model = dnn::read_net_from_onnx(&model_config.model_path);
-
-    let mut model = match model {
-        Ok(model) => model,
-        Err(_) => {
-            println!("Invalid ONNX model.");
-            std::process::exit(0)
-        }
-    };
-    model.set_preferable_backend(dnn::DNN_BACKEND_OPENCV)?;
+    let model = SessionBuilder::new()?.commit_from_file(&model_config.model_path)?;
 
     println!("Yolo ONNX model loaded.");
 
-    Ok(Model {
-        model,
-        model_config,
-    })
+    Ok(Model { model })
 }
 
 fn load_model_from_config() -> Result<ModelConfig, Box<dyn Error>> {
-    let file = File::open("../data/config.json"); // change the path if needed
+    let file = File::open("./data/config.json"); // change the path if needed
     let file = match file {
         Ok(file) => file,
-        Err(_) => {
-            println!("data/config.json does NOT exist.");
+        Err(e) => {
+            println!("{:?}", e);
             std::process::exit(0)
         }
     };
@@ -96,149 +92,118 @@ fn load_model_from_config() -> Result<ModelConfig, Box<dyn Error>> {
     Ok(model_config)
 }
 
-fn pre_process(img: &Mat) -> opencv::Result<Mat> {
-    let width = img.cols();
-    let height = img.rows();
-
-    let _max = std::cmp::max(width, height);
-    // keep the original aspect ratio by adding black padding
-    let mut result = Mat::zeros(_max, _max, core::CV_8UC3)
-        .unwrap()
-        .to_mat()
-        .unwrap();
-    img.copy_to(&mut result)?;
-
-    Ok(result)
-}
-
 // yolo.rs
-pub fn detect(
-    model_data: &mut Model,
-    img: &Mat,
-    conf_thresh: f32,
-    nms_thresh: f32,
-) -> opencv::Result<Detections> {
+pub fn detect(model_data: &mut Model, img: &Mat) -> opencv::Result<()> {
+    let from = img;
+
+    if !from.is_continuous() {
+        panic!("needs to be continous");
+    }
+
+    let size = from.mat_size();
+    let size = size.iter().map(|&dim| dim as usize);
+    let channels = from.channels() as usize;
+
+    let size_and_channel = size.chain([channels]);
+    let size_with_depth: Vec<usize> = [1].into_iter().chain(size_and_channel).collect();
+
+    let numel = size_with_depth.iter().product();
+    let ptr = from.ptr(0)? as *const _;
+
+    let slice = unsafe { std::slice::from_raw_parts(ptr, numel) };
+
+    let src_shape = size_with_depth;
+    let mut array = ArrayViewD::from_shape(src_shape, slice).expect("arr view should be made");
+
+    let array = array.permuted_axes(Vec::from([0, 3, 1, 2]));
+    // swap height and width in case
+    // array.swap_axes(2, 3);
+
+    let array = array.mapv(|f| f as f32);
+
     let model = &mut model_data.model;
-    let model_config = &mut model_data.model_config;
 
-    let mat_info = MatInfo {
-        width: img.cols() as f32,
-        height: img.rows() as f32,
-        scaled_size: model_config.input_size as f32,
-    };
+    let tensor = Tensor::from_array(array).expect("tensor building should work");
 
-    let padded_mat = pre_process(&img).unwrap();
-    // convert the image to blob input with resizing
-    let blob = dnn::blob_from_image(
-        &padded_mat,
-        1.0 / 255.0,
-        core::Size_ {
-            width: model_config.input_size,
-            height: model_config.input_size,
-        },
-        core::Scalar::new(0f64, 0f64, 0f64, 0f64),
-        true,
-        false,
-        core::CV_32F,
-    )?;
-    let out_layer_names = model.get_unconnected_out_layers_names()?;
+    let model_inputs = inputs!["images" => tensor].expect("Input should work");
+    let outputs = model
+        .run(model_inputs)
+        .expect("Model inference should work");
 
-    let mut outs: Vector<Mat> = Vector::default();
-    model.set_input(&blob, "", 1.0, core::Scalar::default())?;
-    model.forward(&mut outs, &out_layer_names)?;
+    let output = outputs["output0"]
+        .try_extract_tensor::<f32>()
+        .expect("extracting should work")
+        .t()
+        .into_owned();
 
-    let detections = post_process(&outs, &mat_info, conf_thresh, nms_thresh)?;
+    let output = output.slice(s![.., .., 0]);
+    let img_width = 640;
+    let img_height = 640;
+    let mut boxes = Vec::new();
 
-    Ok(detections)
+    for row in output.axis_iter(Axis(0)) {
+        let row: Vec<_> = row.iter().copied().collect();
+        let (class_id, prob) = row
+            .iter()
+            // skip bounding box coordinates
+            .skip(4)
+            .enumerate()
+            .map(|(index, value)| (index, *value))
+            .reduce(|accum, row| if row.1 > accum.1 { row } else { accum })
+            .unwrap();
+
+        if prob < 0.5 {
+            continue;
+        }
+
+        let label = YOLOV8_CLASS_LABELS[class_id];
+        let xc = row[0] / 640. * (img_width as f32);
+        let yc = row[1] / 640. * (img_height as f32);
+        let w = row[2] / 640. * (img_width as f32);
+        let h = row[3] / 640. * (img_height as f32);
+
+        boxes.push((
+            BoundingBox {
+                x1: xc - w / 2.,
+                y1: yc - h / 2.,
+                x2: xc + w / 2.,
+                y2: yc + h / 2.,
+            },
+            label,
+            prob,
+        ));
+    }
+
+    boxes.sort_by(|box1, box2| box2.2.total_cmp(&box1.2));
+    let mut result = Vec::new();
+
+    while !boxes.is_empty() {
+        result.push(boxes[0]);
+        boxes = boxes
+            .iter()
+            .filter(|box1| intersection(&boxes[0].0, &box1.0) / union(&boxes[0].0, &box1.0) < 0.7)
+            .copied()
+            .collect();
+    }
+
+    println!("result: {:?}", result);
+
+    Ok(())
 }
 
-fn post_process(
-    outs: &Vector<Mat>,
-    mat_info: &MatInfo,
-    conf_thresh: f32,
-    nms_thresh: f32,
-) -> opencv::Result<Detections> {
-    // outs: tensor float32[1, M, 8400]  M = 4 + the number of classes， 8400 anchors
-    let dets = outs.get(0).unwrap(); // remove the outermost dimension
-                                     // dets: 1xMx8400   1 x [x_center, y_center, width, height, class_0_conf, class_1_conf, ...] x 8400
-    let rows = *dets.mat_size().get(2).unwrap(); // 8400
-    let cols = *dets.mat_size().get(1).unwrap(); // M
+#[derive(Debug, Clone, Copy)]
+struct BoundingBox {
+    x1: f32,
+    y1: f32,
+    x2: f32,
+    y2: f32,
+}
 
-    let mut boxes: Vector<Rect> = Vector::default();
-    let mut scores: Vector<f32> = Vector::default();
-    let mut indices: Vector<i32> = Vector::default();
-    let mut class_index_list: Vector<i32> = Vector::default();
-    let x_scale = mat_info.width / mat_info.scaled_size;
-    let y_scale = mat_info.height / mat_info.scaled_size;
+fn intersection(box1: &BoundingBox, box2: &BoundingBox) -> f32 {
+    (box1.x2.min(box2.x2) - box1.x1.max(box2.x1)) * (box1.y2.min(box2.y2) - box1.y1.max(box2.y1))
+}
 
-    // Iterate over all detections/anchors and get the maximum class confidence score and its index
-    // To understand it better, I iterate over all anchors using the for loop.
-    // In practice, it's recommended to use the function `opencv::core::min_max_loc()` to get the maximum score and its index. easy to use.
-    for row in 0..rows {
-        // 8400 anchors
-        let mut vec = Vec::new();
-        let mut max_score = 0f32;
-        let mut max_index = 0;
-        for col in 0..cols {
-            // [x_center, y_center, width, height, class_0_conf, class_1_conf, ...]
-            // first 4 values are x_center, y_center, width, height
-            let value: f32 = *dets.at_3d::<f32>(0, col, row)?; // (1 x M x 8400)
-            if col > 3 {
-                // the rest (after 4th) values are class scores
-                if value > max_score {
-                    max_score = value;
-                    max_index = col - 4;
-                }
-            }
-            vec.push(value);
-        }
-        // thresholding by score
-        if max_score > 0.25 {
-            scores.push(max_score);
-            class_index_list.push(max_index as i32);
-            let cx = vec[0];
-            let cy = vec[1];
-            let w = vec[2];
-            let h = vec[3];
-            boxes.push(Rect {
-                x: (((cx) - (w) / 2.0) * x_scale).round() as i32,
-                y: (((cy) - (h) / 2.0) * y_scale).round() as i32,
-                width: (w * x_scale).round() as i32,
-                height: (h * y_scale).round() as i32,
-            });
-            indices.push(row as i32);
-        }
-    }
-    // do NMS
-    dnn::nms_boxes(
-        &boxes,
-        &scores,
-        conf_thresh,
-        nms_thresh,
-        &mut indices,
-        1.0,
-        0,
-    )?;
-
-    let mut final_boxes: Vec<BoxDetection> = Vec::default();
-
-    for i in &indices {
-        let class = class_index_list.get(i as usize)?;
-        let rect = boxes.get(i as usize)?;
-
-        let bbox = BoxDetection {
-            xmin: rect.x,
-            ymin: rect.y,
-            xmax: rect.x + rect.width,
-            ymax: rect.y + rect.height,
-            conf: scores.get(i as usize)?,
-            class: class,
-        };
-
-        final_boxes.push(bbox);
-    }
-
-    Ok(Detections {
-        detections: final_boxes,
-    })
+fn union(box1: &BoundingBox, box2: &BoundingBox) -> f32 {
+    ((box1.x2 - box1.x1) * (box1.y2 - box1.y1)) + ((box2.x2 - box2.x1) * (box2.y2 - box2.y1))
+        - intersection(box1, box2)
 }
