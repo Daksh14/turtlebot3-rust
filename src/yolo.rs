@@ -125,8 +125,6 @@ pub fn detect(model_data: &mut Model, img: Frame) -> Result<(), Box<dyn std::err
 
         let label = YOLOV8_CLASS_LABELS[class_id];
 
-        print!("{:?}", label);
-
         let xc = row[0] / 640. * (img_width as f32);
         let yc = row[1] / 640. * (img_height as f32);
         let w = row[2] / 640. * (img_width as f32);
