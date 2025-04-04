@@ -37,7 +37,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     libclang-dev \
     cmake \
-    libopencv-dev \
+    libgtest-dev \
+    libgmock-dev \
     sudo \
     build-essential \
     gcc-arm-linux-gnueabi \
@@ -69,17 +70,8 @@ RUN rustup target add aarch64-unknown-linux-gnu
 RUN dpkg --add-architecture aarch64
 RUN sudo apt-get update
 
-# Install open cv static libraries
-RUN wget -O opencv.zip https://github.com/opencv/opencv/archive/4.x.zip
-RUN wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/4.x.zip
-RUN unzip opencv.zip && rm opencv.zip
-RUN unzip opencv_contrib.zip && rm opencv_contrib.zip
-RUN mkdir -p build && cd build
+# RUN  make -j8 && make install
 
-RUN cmake -DCMAKE_TOOLCHAIN_FILE=/opencv-4.x/platforms/linux/arm-gnueabi.toolchain.cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=NO \
-    -DCMAKE_INSTALL_PREFIX=/root/opencv -DBUILD_DOCS=OFF -DBUILD_EXAMPLES=OFF \
-    -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_opencv_java=OFF \
-    -DBUILD_opencv_python=OFF -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib-4.x/modules \
-    ../opencv-4.x
-
-RUN  make -j8 && make install
+# onnx runtime
+RUN git clone --recursive https://github.com/Microsoft/onnxruntime.git
+RUN cd onnxruntime && git submodule update --init --recursive && ./build.sh --config Release --build_shared_lib --parallel --x86 --skip_winml_tests --skip_test --arm --allow_running_as_root
