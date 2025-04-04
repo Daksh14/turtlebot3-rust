@@ -52,6 +52,7 @@ impl resize::PixelFormat for U8ToF32 {
 }
 
 pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
+    println!("test");
     let mut model = yolo::load_model().expect("The model should load");
 
     let format = RequestedFormat::with_formats(
