@@ -52,9 +52,7 @@ impl resize::PixelFormat for U8ToF32 {
 }
 
 pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
-    println!("test");
     let mut model = yolo::load_model().expect("The model should load");
-    println!("test");
 
     let format = RequestedFormat::with_formats(
         RequestedFormatType::AbsoluteHighestFrameRate,
@@ -80,6 +78,8 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
         resize::Type::Triangle,
     )
     .expect("resizer should init");
+
+    camera.open_stream().expect("Stream should start");
 
     // load the yolo model
     // let img_path = "./data/test.jpg"; // change the path if needed
