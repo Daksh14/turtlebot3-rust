@@ -74,21 +74,12 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
     let height = res.height() as usize;
 
     let mut input_img_buffer = vec![0u8; width * height * 3];
-    let mut resized_input = Tensor::from_array((
-        [1i64, 3, height as i64, width as i64],
-        vec![0_f32; 3 * width * height],
-    ))
-    .expect("Should construct tensor");
+    let mut resized_input =
+        Tensor::from_array(([1i64, 3, 640 * 640], vec![0_f32; 3 * width * height]))
+            .expect("Should construct tensor");
 
-    let mut resizer = resize::new(
-        width,
-        height,
-        width,
-        height,
-        U8ToF32,
-        resize::Type::Triangle,
-    )
-    .expect("resizer should init");
+    let mut resizer = resize::new(width, height, 640, 640, U8ToF32, resize::Type::Triangle)
+        .expect("resizer should init");
 
     camera.open_stream().expect("Stream should start");
 
@@ -130,7 +121,7 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
                         .expect("resize should work");
                 }
 
-                match yolo::detect(&mut model, resized_input.view(), width, height) {
+                match yolo::detect(&mut model, resized_input.view()) {
                     Ok(_) => println!("detected"),
                     Err(e) => println!("err: {:?}", e),
                 }
