@@ -121,7 +121,7 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
     std::thread::spawn(move || {
         if let Some(buffer) = rx.blocking_recv() {
             buffer
-                .decode_image_to_buffer::<RgbAFormat>(&mut input_img_buffer)
+                .decode_image_to_buffer::<RgbFormat>(&mut input_img_buffer)
                 .expect("decoding imgae to buffer should work");
 
             {
