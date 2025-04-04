@@ -94,10 +94,15 @@ fn load_model_from_config() -> Result<ModelConfig, Box<dyn Error>> {
 }
 
 // yolo.rs
-pub fn detect(model_data: &mut Model, img: Frame) -> Result<(), Box<dyn std::error::Error>> {
+pub fn detect(
+    model_data: &mut Model,
+    img: Frame,
+    img_width: usize,
+    img_height: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
     let model = &mut model_data.model;
     let model_inputs = [ort::session::SessionInputValue::from(img)];
-    let outputs = model.run(model_inputs)?;
+    let outputs = model.run(model_inputs).expect("inference should work");
 
     let output = outputs["output0"]
         .try_extract_tensor::<f32>()?
@@ -105,8 +110,6 @@ pub fn detect(model_data: &mut Model, img: Frame) -> Result<(), Box<dyn std::err
         .into_owned();
 
     let output = output.slice(s![.., .., 0]);
-    let img_width = 640;
-    let img_height = 640;
     let mut boxes = Vec::new();
 
     for row in output.axis_iter(Axis(0)) {

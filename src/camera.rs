@@ -130,7 +130,7 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
                         .expect("resize should work");
                 }
 
-                match yolo::detect(&mut model, resized_input.view()) {
+                match yolo::detect(&mut model, resized_input.view(), width, height) {
                     Ok(_) => println!("detected"),
                     Err(e) => println!("err: {:?}", e),
                 }
