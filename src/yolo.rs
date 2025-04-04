@@ -53,9 +53,7 @@ pub struct Model {
 
 pub fn load_model() -> Result<Model, Box<dyn Error>> {
     let model_config = load_model_from_config().unwrap();
-    println!("test");
     let model = SessionBuilder::new()?.commit_from_file(&model_config.model_path)?;
-    println!("test");
     println!("Yolo ONNX model loaded.");
 
     Ok(Model { model })
