@@ -103,16 +103,16 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
 
     // println!("yolo detect test {:?}", yolo::detect(&mut model, xy));
 
-    let (tx, mut rx) = mpsc::channel::<Buffer>(10);
+    let (tx, mut rx) = mpsc::channel::<Buffer>(1);
 
-    std::thread::spawn(move || {
+    tokio::spawn(async move {
         let mut frame_count = 0;
         let mut last_time = Instant::now();
 
         loop {
             let buffer = camera.frame().expect("frame should be retrievable");
 
-            tx.blocking_send(buffer)
+            tx.send(buffer).await
                 .expect("Should be able to send over channel");
 
             frame_count += 1;
