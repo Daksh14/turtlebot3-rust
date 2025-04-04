@@ -70,8 +70,6 @@ RUN rustup target add aarch64-unknown-linux-gnu
 RUN dpkg --add-architecture aarch64
 RUN sudo apt-get update
 
-# RUN  make -j8 && make install
-
 # onnx runtime
 RUN git clone --recursive https://github.com/Microsoft/onnxruntime.git
 RUN cd onnxruntime && git submodule update --init --recursive && ./build.sh --config Release --build_shared_lib --parallel --x86 --skip_winml_tests --skip_test --arm --allow_running_as_root
