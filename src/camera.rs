@@ -103,7 +103,7 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
 
     // println!("yolo detect test {:?}", yolo::detect(&mut model, xy));
 
-    let (tx, mut rx) = mpsc::channel::<Buffer>(100);
+    let (tx, mut rx) = mpsc::channel::<Buffer>(1000);
 
     std::thread::spawn(move || {
         loop {
