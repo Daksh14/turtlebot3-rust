@@ -109,6 +109,8 @@ pub fn detect(model_data: &mut Model, img: Frame) -> Result<(), Box<dyn std::err
     let img_height = 640;
     let mut boxes = Vec::new();
 
+    println!("{:?}", output);
+
     for row in output.axis_iter(Axis(0)) {
         let row: Vec<_> = row.iter().copied().collect();
         let (class_id, prob) = row
