@@ -1,5 +1,5 @@
 {
-  "model_path": "./data/best.onnx",
+  "model_path": "../data/best.onnx",
   "input_size": 640,
   "class_names": ["picture_frame", "robot", "football", "sheep", "cone"]
 }
