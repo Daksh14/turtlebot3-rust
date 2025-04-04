@@ -75,7 +75,7 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
 
     let mut input_img_buffer = vec![0u8; width * height * 3];
     let mut resized_input = Tensor::from_array((
-        [1i64, 3, width as i64, height as i64],
+        [1i64, 3, height as i64, width as i64],
         vec![0_f32; 3 * width * height],
     ))
     .expect("Should construct tensor");
