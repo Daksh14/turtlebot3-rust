@@ -1,19 +1,16 @@
-use image::{ImageReader, Rgb, Rgb32FImage};
 use nokhwa::{
-    Buffer, CallbackCamera, Camera, nokhwa_initialize,
-    pixel_format::{RgbAFormat, RgbFormat},
-    query,
+    Buffer, Camera,
+    pixel_format::RgbFormat,
     utils::{
         ApiBackend, CameraIndex, FrameFormat, RequestedFormat, RequestedFormatType, Resolution,
     },
 };
-use ort::value::{Tensor, Value};
-use resize::Pixel::RGB8;
+use ort::value::Tensor;
 use rgb::FromSlice;
 use std::time::Instant;
 use tokio::sync::mpsc;
 
-use crate::yolo::{self, Frame};
+use crate::yolo::{self};
 
 use resize::px::RGB;
 
@@ -119,22 +116,24 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
     let (tx, mut rx) = mpsc::channel::<Buffer>(100);
 
     std::thread::spawn(move || {
-        if let Some(buffer) = rx.blocking_recv() {
-            buffer
-                .decode_image_to_buffer::<RgbFormat>(&mut input_img_buffer)
-                .expect("decoding imgae to buffer should work");
+        loop {
+            if let Some(buffer) = rx.blocking_recv() {
+                buffer
+                    .decode_image_to_buffer::<RgbFormat>(&mut input_img_buffer)
+                    .expect("decoding imgae to buffer should work");
 
-            {
-                let (_, resized_input_buffer) = resized_input.extract_raw_tensor_mut();
+                {
+                    let (_, resized_input_buffer) = resized_input.extract_raw_tensor_mut();
 
-                resizer
-                    .resize(input_img_buffer.as_rgb(), resized_input_buffer.as_rgb_mut())
-                    .expect("resize should work");
-            }
+                    resizer
+                        .resize(input_img_buffer.as_rgb(), resized_input_buffer.as_rgb_mut())
+                        .expect("resize should work");
+                }
 
-            match yolo::detect(&mut model, resized_input) {
-                Ok(x) => println!("detected"),
-                _ => (),
+                match yolo::detect(&mut model, resized_input.view()) {
+                    Ok(_) => println!("detected"),
+                    _ => (),
+                }
             }
         }
     });

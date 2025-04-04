@@ -2,15 +2,14 @@
 use ndarray::{s, Array, ArrayViewD, Axis};
 use ort::{
     inputs,
-    session::{builder::SessionBuilder, Session, SessionOutputs},
-    value::{Tensor, TensorValueType, Value},
+    session::{builder::SessionBuilder, Session},
+    value::{TensorValueType, ValueRef},
 };
 use serde::{Deserialize, Serialize};
 
-use core::error;
 use std::{error::Error, fs::File, io::BufReader};
 
-pub type Frame = Value<TensorValueType<f32>>;
+pub type Frame<'a> = ValueRef<'a, TensorValueType<f32>>;
 
 const YOLOV8_CLASS_LABELS: [&str; 10] = [
     "blue cone",
@@ -98,7 +97,7 @@ fn load_model_from_config() -> Result<ModelConfig, Box<dyn Error>> {
 // yolo.rs
 pub fn detect(model_data: &mut Model, img: Frame) -> Result<(), Box<dyn std::error::Error>> {
     let model = &mut model_data.model;
-    let model_inputs = inputs![img]?;
+    let model_inputs = [ort::session::SessionInputValue::from(img)];
     let outputs = model.run(model_inputs)?;
 
     let output = outputs["output0"]
