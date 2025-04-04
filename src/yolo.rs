@@ -1,7 +1,6 @@
 // yolo.rs
-use ndarray::{s, Array, ArrayViewD, Axis};
+use ndarray::{s, Axis};
 use ort::{
-    inputs,
     session::{builder::SessionBuilder, Session},
     value::{TensorValueType, ValueRef},
 };
