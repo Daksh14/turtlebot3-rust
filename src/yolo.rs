@@ -55,8 +55,9 @@ pub struct Model {
 
 pub fn load_model() -> Result<Model, Box<dyn Error>> {
     let model_config = load_model_from_config().unwrap();
+    println!("test");
     let model = SessionBuilder::new()?.commit_from_file(&model_config.model_path)?;
-
+    println!("test");
     println!("Yolo ONNX model loaded.");
 
     Ok(Model { model })
@@ -96,11 +97,9 @@ fn load_model_from_config() -> Result<ModelConfig, Box<dyn Error>> {
 
 // yolo.rs
 pub fn detect(model_data: &mut Model, img: Frame) -> Result<(), Box<dyn std::error::Error>> {
-
     let model = &mut model_data.model;
     let model_inputs = inputs![img]?;
-    let outputs = model
-        .run(model_inputs)?;
+    let outputs = model.run(model_inputs)?;
 
     let output = outputs["output0"]
         .try_extract_tensor::<f32>()?
@@ -127,9 +126,8 @@ pub fn detect(model_data: &mut Model, img: Frame) -> Result<(), Box<dyn std::err
             continue;
         }
 
-
         let label = YOLOV8_CLASS_LABELS[class_id];
-        
+
         println!("{:?}", label);
         let xc = row[0] / 640. * (img_width as f32);
         let yc = row[1] / 640. * (img_height as f32);
