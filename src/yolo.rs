@@ -114,7 +114,6 @@ pub fn detect(model_data: &mut Model, img: Frame) -> Result<(), Box<dyn std::err
         let (class_id, prob) = row
             .iter()
             // skip bounding box coordinates
-            .skip(4)
             .enumerate()
             .map(|(index, value)| (index, *value))
             .reduce(|accum, row| if row.1 > accum.1 { row } else { accum })
@@ -125,6 +124,8 @@ pub fn detect(model_data: &mut Model, img: Frame) -> Result<(), Box<dyn std::err
         }
 
         let label = YOLOV8_CLASS_LABELS[class_id];
+
+        print!("{:?}", label);
 
         let xc = row[0] / 640. * (img_width as f32);
         let yc = row[1] / 640. * (img_height as f32);
