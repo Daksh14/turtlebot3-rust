@@ -24,8 +24,8 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
 
     camera
         .set_resolution(Resolution {
-            width_x: 1280,
-            height_y: 720,
+            width_x: 1920,
+            height_y: 1080,
         })
         .expect("setting res should work");
 
@@ -61,7 +61,7 @@ pub async fn yolo_detect_test() {
     let mut model = yolo::load_model().expect("The model should load");
 
     // load the yolo model
-    let img_path = "./data/test.jpg"; // change the path if needed
+    let img_path = "../data/IMG_8405.JPG"; // change the path if needed
     let img = image::ImageReader::open(img_path).unwrap().decode().unwrap();
 
     println!("yolo detect test {:?}", yolo::detect(&mut model, img.into()));
