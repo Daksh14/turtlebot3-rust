@@ -20,21 +20,6 @@ const YOLOV8_CLASS_LABELS: [&str; 10] = [
     "yellow cone",
 ];
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct BoxDetection {
-    pub xmin: i32,  // bounding box left-top x
-    pub ymin: i32,  // bounding box left-top y
-    pub xmax: i32,  // bounding box right-bottom x
-    pub ymax: i32,  // bounding box right-bottom y
-    pub class: i32, // class index
-    pub conf: f32,  // confidence score
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Detections {
-    pub detections: Vec<BoxDetection>,
-}
-
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 pub struct ModelConfig {
@@ -60,7 +45,7 @@ pub fn load_model() -> Result<Model, Box<dyn Error>> {
         .with_ixx(0, 0, (1, 1, 4).into())
         .with_ixx(0, 2, (0, 640, 640).into())
         .with_ixx(0, 3, (0, 640, 640).into())
-        .with_confs(&[0.2, 0.15])
+        .with_confs(&[0.25])
         .with_names(&YOLOV8_CLASS_LABELS);
 
     let model = YOLO::new(options).expect("yolo model to load");
