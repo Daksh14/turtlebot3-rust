@@ -37,9 +37,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     libclang-dev \
     cmake \
+    ffmpeg \
+    pkg-config \ 
+    libavutil-dev \ 
+    libavformat-dev \
+    libavfilter-dev \
+    libavdevice-dev \
     libgtest-dev \
     libgmock-dev \
-    sudo \
     build-essential \
     gcc-arm-linux-gnueabi \
     gcc-arm-linux-gnueabihf \

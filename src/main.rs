@@ -55,6 +55,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // camera process + yolo detect
     tokio::spawn(camera::cam_plus_yolo_detect());
+    // just yolo detect
+    // tokio::spawn(camera::yolo_detect_test());
 
     // navigation process
     tokio::spawn(async move {
