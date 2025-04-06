@@ -8,6 +8,8 @@ mod errors;
 mod yolo;
 // lidar module
 mod lidar;
+// supersonic module
+mod supersonic;
 
 use r2r::sensor_msgs::msg::LaserScan;
 use r2r::example_interfaces::msg::Float32;
@@ -64,46 +66,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // channel for supersonic sensor readings
     let (supersonic_tx, mut supersonic_rx) = mpsc::channel::<f32>(100);
 
-    tokio::spawn(async move {
-        let mut node = supersonic_node_cl.lock().await;
-        let publisher = match node.create_publisher::<Float32>("supersonic_distance", r2r::QosProfile::default()) {
-            Ok(publisher) => publisher,
-            Err(e) => {
-                eprintln!("Failed to create publisher: {}", e);
-                return;
-            }
-        };
-        
-        loop {
-            // read from the supersonic sensor
-            if let Ok(distance) = supersonic_rx.try_recv() {
-                let mut msg = Float32::default();
-
-                msg.data = distance;
-                if let Err(e) = publisher.publish(&msg) {
-                    eprintln!("Failed to publish message: {}", e);
-                }
-
-                // basic check, change later
-                if distance < 0.3 { // 30cm 
-                    println!("Warning: Obstacle detected at {:.2}m", distance);
-                }
-            }
-            else {
-                println!("No supersonic sensor reading available!");
-            }
-
-            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        }
-    });
+    tokio::spawn(supersonic::supersonic_process(supersonic_node_cl, supersonic_rx));
 
     // navigation process
     tokio::spawn(async move {
         let nav_node_cl = Arc::clone(&nav_node_cl);
         // this is what the bot is doing at any point in time
-        let start_sequence = Sequence::RandomMovement;
+        let start_sequence = Sequence::Stop;
 
-        nav::move_process(start_sequence, nav_node_cl, lidar_rx).await
+        nav::move_process(start_sequence, nav_node_cl, lidar_rx)
     });
 
     loop {
