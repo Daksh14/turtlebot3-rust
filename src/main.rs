@@ -10,6 +10,7 @@ mod yolo;
 mod lidar;
 
 use r2r::sensor_msgs::msg::LaserScan;
+use r2r::example_interfaces::msg::Float32;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::sync::mpsc;
@@ -61,19 +62,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let supersonic_node_cl = Arc::clone(&supersonic_node);
 
     // channel for supersonic sensor readings
-    let (supersonic_tx, supersonic_rx) = mpsc::channel::<f32>(100);
+    let (supersonic_tx, mut supersonic_rx) = mpsc::channel::<f32>(100);
 
     tokio::spawn(async move {
         let mut node = supersonic_node_cl.lock().await;
-        let publisher = node.create_publisher::<std_msgs::msg::Float32>("supersonic_distance", r2r::QosProfile::default())?;
+        let publisher = match node.create_publisher::<Float32>("supersonic_distance", r2r::QosProfile::default()) {
+            Ok(publisher) => publisher,
+            Err(e) => {
+                eprintln!("Failed to create publisher: {}", e);
+                return;
+            }
+        };
         
         loop {
             // read from the supersonic sensor
             if let Ok(distance) = supersonic_rx.try_recv() {
-                let mut msg = std_msgs::msg::Float32::default();
+                let mut msg = Float32::default();
 
                 msg.data = distance;
-                publisher.publish(&msg)?;
+                if let Err(e) = publisher.publish(&msg) {
+                    eprintln!("Failed to publish message: {}", e);
+                }
 
                 // basic check, change later
                 if distance < 0.3 { // 30cm 
@@ -81,7 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             else {
-                println!("No supersonic sensor reading available! Error: {:?}", error);
+                println!("No supersonic sensor reading available!");
             }
 
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
