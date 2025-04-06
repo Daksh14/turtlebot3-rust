@@ -2,14 +2,15 @@ use r2r::example_interfaces::msg::Float32;
 use tokio::sync::mpsc;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use serde_json::json;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Handles the supersonic sensor data processing and publishing
 /// 
 /// - creates a ROS2 publisher for distance readings
 /// - continuously reads from the sensor channel
 /// - publishes distance data and handles obstacle detection
-/// - [TODO]: pack into json payload and send to the mongodb
-
+/// - packs data into JSON payload for MongoDB storage
 pub async fn supersonic_process(
     node: Arc<Mutex<r2r::Node>>,
     mut supersonic_rx: mpsc::Receiver<f32>,
@@ -39,11 +40,28 @@ pub async fn supersonic_process(
             }
 
             // obstacle detection - warn if object is too close
+            // note: this was for testing purposes, doesn't need to be here..
             if distance < 0.3 { // 30cm threshold
                 println!("Warning: Obstacle detected at {:.2}m", distance);
             }
 
-            // [TODO]: json payload/mongodb stuff
+            // create JSON payload with timestamp and distance data
+            let timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            
+            let json_payload = json!({
+                "timestamp": timestamp,
+                "distance": distance,
+                "sensor_type": "supersonic",
+                "unit": "meters",
+                "obstacle_detected": distance < 0.3
+            });
+
+            // print the JSON payload
+            // [TODO]: will be replaced with MongoDB insertion later
+            println!("JSON Payload: {}", json_payload);
         }
         else {
             println!("No supersonic sensor reading available!");
