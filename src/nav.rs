@@ -231,7 +231,7 @@ fn scale_0_to_200(value: f32) -> f32 {
     let new_min = 0.3;
     let new_max = -0.3;
     let old_min = 0.0;
-    let old_max = 200.0;
+    let old_max = 270.0;
 
     if value < old_min || value > old_max {
         panic!("Value out of range (0-200): {}", value);
