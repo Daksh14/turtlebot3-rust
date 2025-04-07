@@ -2,7 +2,7 @@ use nokhwa::{
     Buffer, Camera,
     pixel_format::RgbFormat,
     utils::{
-        ApiBackend, CameraIndex, FrameFormat, RequestedFormat, RequestedFormatType, Resolution,
+        ApiBackend, CameraIndex, FrameFormat, CameraFormat, RequestedFormat, Resolution, RequestedFormatType,
     },
 };
 use std::sync::mpsc;
@@ -13,22 +13,20 @@ use crate::yolo::{self};
 pub fn cam_plus_yolo_detect() -> Result<(), ()> {
     let mut model = yolo::load_model().expect("The model should load");
 
-    let format = RequestedFormat::with_formats(
-        RequestedFormatType::AbsoluteHighestFrameRate,
-        &[FrameFormat::MJPEG],
-    );
+    let res = Resolution {
+        width_x: 640,
+        height_y: 360,
+    };
+
+    let frame_format = FrameFormat::MJPEG;
+    let fps = 5;
+
+    let req_format_type = RequestedFormatType::Exact(CameraFormat::new(res, frame_format, fps));
+    let format = RequestedFormat::new::<RgbFormat>(req_format_type);
 
     let mut camera: Camera =
         Camera::with_backend(CameraIndex::Index(0), format, ApiBackend::Video4Linux)
             .expect("Constructing camera should succeed");
-
-    camera
-        .set_resolution(Resolution {
-            width_x: 640,
-            height_y: 360,
-        })
-        .expect("setting res should work");
-
 
     camera.open_stream().expect("Stream should start");
 
