@@ -31,24 +31,12 @@ pub fn cam_plus_yolo_detect() -> Result<(), ()> {
 
     camera.open_stream().expect("Stream should start");
 
-    let (tx, rx) = mpsc::channel::<Buffer>();
-
-    std::thread::spawn(move || {
-        loop {
-            if let Ok(buffer) = rx.recv() {
-                let img = buffer.decode_image::<RgbFormat>()
-                    .expect("decoding image to buffer should work");
-                
-                println!("{:?}", yolo::detect(&mut model, img));
-
-            }
-        }
-    });
-
     loop {
         let buffer = camera.frame().expect("frame should be retrievable");
 
-        tx.send(buffer).expect("Should be able to send over channel");
+        let img = buffer.decode_image::<RgbFormat>().expect("decoding image to buffer should work");
+
+        println!("{:?}", yolo::detect(&mut model, img));
     }
 }
 
