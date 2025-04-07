@@ -98,7 +98,7 @@ pub fn detect(model_data: &mut Model, img: Frame) -> Vec<Bbox> {
                 for bbox in bboxes {
                     let conf = bbox.confidence();
 
-                    if conf > 0.8 {
+                    if conf >= 0.9 {
                         res_bbox.push(bbox.clone());
                     }
                 }
