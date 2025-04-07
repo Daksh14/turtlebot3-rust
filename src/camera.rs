@@ -5,6 +5,7 @@ use nokhwa::{
         ApiBackend, CameraIndex, FrameFormat, CameraFormat, RequestedFormat, Resolution, RequestedFormatType,
     },
 };
+use std::time::Instant;
 use std::sync::mpsc;
 
 use crate::yolo::{self};
@@ -33,12 +34,26 @@ pub fn cam_plus_yolo_detect() -> Result<(), ()> {
     let (tx, rx) = mpsc::channel::<Buffer>();
 
     std::thread::spawn(move || {
+        let mut frame_count = 0;
+        let mut last_time = Instant::now();
+
         loop {
             if let Ok(buffer) = rx.recv() {
                 let img = buffer.decode_image::<RgbFormat>()
                     .expect("decoding image to buffer should work");
                 
-                println!("detected bboxes: {:?}", yolo::detect(&mut model, img));
+                yolo::detect(&mut model, img);
+
+                frame_count += 1;
+
+                let elapsed = last_time.elapsed();
+
+                if elapsed.as_secs() >= 1 {
+                    let fps = frame_count as f64 / elapsed.as_secs_f64();
+                    println!("recving FPS: {:.2}", fps);
+                    frame_count = 0;
+                    last_time = Instant::now();
+                }
             }
         }
     });
