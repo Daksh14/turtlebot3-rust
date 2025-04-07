@@ -19,7 +19,7 @@ pub fn cam_plus_yolo_detect() -> Result<(), ()> {
     };
 
     let frame_format = FrameFormat::MJPEG;
-    let fps = 5;
+    let fps = 30;
 
     let req_format_type = RequestedFormatType::Exact(CameraFormat::new(res, frame_format, fps));
     let format = RequestedFormat::new::<RgbFormat>(req_format_type);
