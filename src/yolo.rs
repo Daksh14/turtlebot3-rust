@@ -1,6 +1,6 @@
 // yolo.rs
 use serde::{Deserialize, Serialize};
-use usls::{models::YOLO, Device, Options, Vision, YOLOTask, YOLOVersion};
+use usls::{models::YOLO, Bbox, Device, Nms, Options, Vision, YOLOTask, YOLOVersion};
 
 use image::{DynamicImage, RgbImage};
 use std::{error::Error, fs::File, io::BufReader};
@@ -87,13 +87,26 @@ fn load_model_from_config() -> Result<ModelConfig, Box<dyn Error>> {
     Ok(model_config)
 }
 
-// yolo.rs
-pub fn detect(model_data: &mut Model, img: Frame) -> Result<(), Box<dyn std::error::Error>> {
+pub fn detect(model_data: &mut Model, img: Frame) -> Vec<Bbox> {
     let model = &mut model_data.model;
 
     let result = model.run(&[DynamicImage::ImageRgb8(img)]);
 
-    println!("result: {:?}", result);
+    let mut res_bbox = Vec::with_capacity(2);
 
-    Ok(())
+    if let Ok(result) = result {
+        for res in result {
+            if let Some(bboxes) = res.bboxes() {
+                for bbox in bboxes {
+                    let conf = bbox.confidence();
+
+                    if conf > 0.8 {
+                        res_bbox.push(bbox.clone());
+                    }
+                }
+            }
+        }
+    }
+
+    res_bbox
 }
