@@ -54,7 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(lidar::lidar_scan(liadr_node_cl, lidar_tx));
 
     // camera process + yolo detect
-    tokio::spawn(camera::cam_plus_yolo_detect());
+    std::thread::spawn(move || { camera::cam_plus_yolo_detect() });
     // just yolo detect
     // tokio::spawn(camera::yolo_detect_test());
 

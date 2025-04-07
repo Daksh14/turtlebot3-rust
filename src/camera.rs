@@ -5,12 +5,12 @@ use nokhwa::{
         ApiBackend, CameraIndex, FrameFormat, RequestedFormat, RequestedFormatType, Resolution,
     },
 };
-use tokio::sync::mpsc;
+use std::sync::mpsc;
 
 use crate::yolo::{self};
 
 
-pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
+pub fn cam_plus_yolo_detect() -> Result<(), ()> {
     let mut model = yolo::load_model().expect("The model should load");
 
     let format = RequestedFormat::with_formats(
@@ -24,36 +24,31 @@ pub async fn cam_plus_yolo_detect() -> Result<(), ()> {
 
     camera
         .set_resolution(Resolution {
-            width_x: 1920,
-            height_y: 1080,
+            width_x: 800,
+            height_y: 600,
         })
         .expect("setting res should work");
 
 
     camera.open_stream().expect("Stream should start");
 
-    let (tx, mut rx) = mpsc::channel::<Buffer>(100);
+    let (tx, rx) = mpsc::channel::<Buffer>();
 
-    tokio::spawn(async move {
+    std::thread::spawn(move || {
         loop {
-            let buffer = camera.frame().expect("frame should be retrievable");
-
-            tx.send(buffer).await
-                .expect("Should be able to send over channel");
+            if let Ok(buffer) = rx.recv() {
+                let img = buffer.decode_image::<RgbFormat>()
+                    .expect("decoding image to buffer should work");
+                
+                println!("detected bboxes: {:?}", yolo::detect(&mut model, img));
+            }
         }
     });
 
     loop {
-        if let Some(buffer) = rx.recv().await {
-            let img = buffer
-                .decode_image::<RgbFormat>()
-                .expect("decoding imgae to buffer should work");
+        let buffer = camera.frame().expect("frame should be retrievable");
 
-            match yolo::detect(&mut model, img) {
-                Ok(_) => (),
-                Err(e) => println!("err: {:?}", e),
-            }
-        }
+        tx.send(buffer).expect("Should be able to send over channel");
     }
 }
 
