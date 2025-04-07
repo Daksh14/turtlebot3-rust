@@ -7,16 +7,14 @@ use std::{error::Error, fs::File, io::BufReader};
 
 pub type Frame = RgbImage;
 
-const YOLOV8_CLASS_LABELS: [&str; 10] = [
-    "blue cone",
+const YOLOV8_CLASS_LABELS: [&str; 8] = [
     "cow",
     "football",
     "green cone",
-    "mouse",
-    "orange cone",
     "picFrame",
     "purple cone",
-    "robot",
+    "red cone",
+    "robot drummer",
     "yellow cone",
 ];
 
@@ -43,8 +41,8 @@ pub fn load_model() -> Result<Model, Box<dyn Error>> {
         .with_yolo_task(YOLOTask::Detect)
         .with_device(Device::Cpu(0))
         .with_ixx(0, 0, (1, 1, 4).into())
-        .with_ixx(0, 2, (0, 640, 640).into())
-        .with_ixx(0, 3, (0, 640, 640).into())
+        .with_ixx(0, 2, (0, 640, 360).into())
+        .with_ixx(0, 3, (0, 640, 360).into())
         .with_confs(&[0.25])
         .with_names(&YOLOV8_CLASS_LABELS);
 
