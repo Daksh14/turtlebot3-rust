@@ -228,13 +228,13 @@ pub async fn nav_stop(node: NavNode) {
 }
 
 fn scale_0_to_200(value: f32) -> f32 {
-    let new_min = 0.3;
-    let new_max = -0.3;
+    let new_min = 1.0;
+    let new_max = -1.0;
     let old_min = 0.0;
-    let old_max = 270.0;
+    let old_max = 350.0;
 
     if value < old_min || value > old_max {
-        panic!("Value out of range (0-200): {}", value);
+        panic!("Value out of range (0-350): {}", value);
     }
 
     let normalized = (value - old_min) / (old_max - old_min);
