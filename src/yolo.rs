@@ -2,6 +2,7 @@
 use serde::Deserialize;
 use usls::{models::YOLO, Bbox, Device, Nms, Options, Vision, YOLOTask, YOLOVersion};
 
+use crate::YoloResult;
 use image::{DynamicImage, RgbImage};
 use std::{error::Error, fs::File, io::BufReader};
 
@@ -85,7 +86,7 @@ fn load_model_from_config() -> Result<ModelConfig, Box<dyn Error>> {
     Ok(model_config)
 }
 
-pub fn detect(model_data: &mut Model, img: Frame) -> Vec<Bbox> {
+pub fn detect(model_data: &mut Model, img: Frame) -> YoloResult {
     let model = &mut model_data.model;
 
     let result = model.run(&[DynamicImage::ImageRgb8(img)]);

@@ -7,11 +7,13 @@ use nokhwa::{
 };
 use std::time::Instant;
 use std::sync::mpsc;
+use usls::Bbox;
+use std::sync::mpsc::Sender;
 
-use crate::yolo::{self};
+use crate::{yolo::{self}, YoloResult};
 
 
-pub fn cam_plus_yolo_detect() -> Result<(), ()> {
+pub fn cam_plus_yolo_detect(yolo_tx: Sender<YoloResult>) -> Result<(), ()> {
     let mut model = yolo::load_model().expect("The model should load");
 
     let res = Resolution {
@@ -36,7 +38,7 @@ pub fn cam_plus_yolo_detect() -> Result<(), ()> {
 
         let img = buffer.decode_image::<RgbFormat>().expect("decoding image to buffer should work");
 
-        println!("{:?}", yolo::detect(&mut model, img));
+        yolo_tx.send(yolo::detect(&mut model, img));
     }
 }
 

@@ -7,9 +7,11 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::sync::mpsc::Receiver;
 use tokio::time::{Duration, sleep};
+use std::sync::mpsc::Receiver as BlockingRecv;
 
-use crate::Sequence;
+use crate::{Sequence, YoloResult};
 use crate::lidar::{self, Direction};
+use usls::Bbox;
 
 type NavNode = Arc<Mutex<Node>>;
 
@@ -19,8 +21,11 @@ pub async fn move_process(
     starting_seq: Sequence,
     nav_node: NavNode,
     mut lidar_rx: Receiver<LaserScan>,
+    yolo_rx: BlockingRecv<YoloResult>,
 ) {
     let mut current_sequence = starting_seq;
+
+    // detect at least 3 instances of the object to confirm its existence
 
     loop {
         let cl = Arc::clone(&nav_node);
@@ -67,7 +72,16 @@ pub async fn move_process(
                 }
             }
             Sequence::TrackingToCharm => {
-                // TrackingToCharm
+                match yolo_rx.recv() {
+                    Ok(bboxes) => {
+                        for bbox in bboxes {
+                            let (x1, y1, x2, y2) = bbox.xyxy();
+
+                            println!("{:?}", x1);
+                        }
+                    }
+                    Err(_) => {}
+                }
             }
             Sequence::SharmCollected => {
                 // SharmCollected

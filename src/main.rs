@@ -13,6 +13,8 @@ use r2r::sensor_msgs::msg::LaserScan;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::sync::mpsc;
+use usls::Bbox;
+use std::sync::mpsc::channel as std_channel;
 
 // generate a node with a given name and namespace is set to turtlemove statically
 pub fn generate_node(name: &str) -> r2r::Result<r2r::Node> {
@@ -35,6 +37,8 @@ pub enum Sequence {
     Stop,
 }
 
+pub type YoloResult = Vec<Bbox>;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // duration of each node spin
@@ -50,11 +54,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Launch the lidar communication channel, should be done with redis? I disagree
     let (lidar_tx, lidar_rx) = mpsc::channel::<LaserScan>(100);
 
+    let (yolo_tx, yolo_rx) = std_channel::<YoloResult>();
+
     // lidar process
     tokio::spawn(lidar::lidar_scan(liadr_node_cl, lidar_tx));
 
     // camera process + yolo detect
-    std::thread::spawn(move || { camera::cam_plus_yolo_detect() });
+    std::thread::spawn(move || { camera::cam_plus_yolo_detect(yolo_tx) });
     // just yolo detect
     // tokio::spawn(camera::yolo_detect_test());
 
@@ -62,9 +68,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         let nav_node_cl = Arc::clone(&nav_node_cl);
         // this is what the bot is doing at any point in time
-        let start_sequence = Sequence::RandomMovement;
+        let start_sequence = Sequence::TrackingToCharm;
 
-        nav::move_process(start_sequence, nav_node_cl, lidar_rx).await
+        nav::move_process(start_sequence, nav_node_cl, lidar_rx, yolo_rx).await
     });
 
     loop {
