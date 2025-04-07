@@ -53,7 +53,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Launch the lidar communication channel, should be done with redis? I disagree
     let (lidar_tx, lidar_rx) = mpsc::channel::<LaserScan>(100);
-
     let (yolo_tx, yolo_rx) = std_channel::<YoloResult>();
 
     // lidar process
