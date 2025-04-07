@@ -88,7 +88,6 @@ pub async fn move_process(
             }
             Sequence::Stop => {
                 nav_stop(cl).await;
-
                 println!("Stopping stop stop");
 
                 break;
