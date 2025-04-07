@@ -82,7 +82,7 @@ pub async fn move_process(
 
                             let scaled =  scale_0_to_200(x1);
 
-                            rotate(cl_2, scaled as f64);
+                            rotate(cl_2, scaled as f64).await;
                         }
                     }
                     Err(_) => {}
