@@ -104,8 +104,10 @@ pub async fn move_process(
 pub async fn get_pub(node: NavNode) -> Publisher<Twist> {
     let mut lock = node.lock().await;
 
+    let profile = QosProfile::default().lifespan(Duration::from_millis(500));
+
     let publisher = lock
-        .create_publisher::<Twist>("/cmd_vel", QosProfile::default())
+        .create_publisher::<Twist>("/cmd_vel", profile)
         .unwrap();
 
     publisher
@@ -169,6 +171,7 @@ pub async fn rotate(node: NavNode, z: f64) {
         Ok(_) => println!("Rotating instruction sent"),
         Err(e) => eprintln!("Failed to publish 360 rotating instructions {}", e),
     }
+
 
 }
 
