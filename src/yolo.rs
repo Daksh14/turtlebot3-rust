@@ -1,5 +1,5 @@
 // yolo.rs
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use usls::{models::YOLO, Bbox, Device, Nms, Options, Vision, YOLOTask, YOLOVersion};
 
 use image::{DynamicImage, RgbImage};
