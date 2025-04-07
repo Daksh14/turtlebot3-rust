@@ -15,7 +15,7 @@ pub fn cam_plus_yolo_detect() -> Result<(), ()> {
 
     let format = RequestedFormat::with_formats(
         RequestedFormatType::AbsoluteHighestFrameRate,
-        &[FrameFormat::MJPEG],
+        &[FrameFormat::RAWRGB],
     );
 
     let mut camera: Camera =
