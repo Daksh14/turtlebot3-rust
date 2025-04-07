@@ -77,7 +77,7 @@ pub async fn move_process(
                         for bbox in bboxes {
                             let (x1, y1, x2, y2) = bbox.xyxy();
 
-                            println!("{:?}", x1);
+                            println!("{:?}", scale_0_to_200(x1));
                         }
                     }
                     Err(_) => {}
@@ -192,4 +192,18 @@ pub async fn nav_stop(node: NavNode) {
         Ok(_) => println!("Stopping instruction sent"),
         Err(e) => eprintln!("Failed to stop the bot, this is bad {}", e),
     };
+}
+
+fn scale_0_to_200(value: f32) -> f32 {
+    let new_min = -0.3;
+    let new_max = 0.3;
+    let old_min = 0.0;
+    let old_max = 200.0;
+
+    if value < old_min || value > old_max {
+        panic!("Value out of range (0-200): {}", value);
+    }
+
+    let normalized = (value - old_min) / (old_max - old_min);
+    new_min + normalized * (new_max - new_min)
 }
