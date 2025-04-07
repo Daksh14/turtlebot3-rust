@@ -1,0 +1,11 @@
+[package]
+name = "project"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+apriltag-image = "0.1.0"
+apriltag = "0.4.0"
+image = "0.24.9"
+anyhow = "1.0.97"
+dirs = "4.0"
