@@ -228,8 +228,8 @@ pub async fn nav_stop(node: NavNode) {
 }
 
 fn scale_0_to_200(value: f32) -> f32 {
-    let new_min = -0.3;
-    let new_max = 0.3;
+    let new_min = 0.3;
+    let new_max = -0.3;
     let old_min = 0.0;
     let old_max = 200.0;
 
