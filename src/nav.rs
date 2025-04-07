@@ -72,12 +72,17 @@ pub async fn move_process(
                 }
             }
             Sequence::TrackingToCharm => {
+                let cl = Arc::clone(&cl);
+
                 match yolo_rx.recv() {
                     Ok(bboxes) => {
                         for bbox in bboxes {
+                            let cl_2 = Arc::clone(&cl);
                             let (x1, y1, x2, y2) = bbox.xyxy();
 
-                            println!("{:?}", scale_0_to_200(x1));
+                            let scaled =  scale_0_to_200(x1);
+
+                            rotate(cl_2, scaled as f64);
                         }
                     }
                     Err(_) => {}
@@ -140,6 +145,31 @@ pub async fn nav_move(node: NavNode, distance_x: f64, turn_abs: f64) {
 
     // Sleep for time needed to reach distance
     sleep(Duration::from_secs(travel_time)).await;
+}
+
+pub async fn rotate(node: NavNode, z: f64) {
+    let cl = Arc::clone(&node);
+    let publisher = get_pub(cl).await;
+
+    let twist = Twist {
+        linear: Vector3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }, // Move forward
+        angular: Vector3 {
+            x: 0.0,
+            y: 0.0,
+            z: z,
+        }, // Rotate slightly
+    };
+
+    // Publish the rotation message
+    match publisher.publish(&twist) {
+        Ok(_) => println!("Rotating instruction sent"),
+        Err(e) => eprintln!("Failed to publish 360 rotating instructions {}", e),
+    }
+
 }
 
 pub async fn rotate360(node: NavNode) {
