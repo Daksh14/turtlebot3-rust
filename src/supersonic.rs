@@ -55,7 +55,7 @@ pub async fn supersonic_process(
                 format!("Supersonic sensor reading: {:.2}m", distance),
             )
             .with_sensors(Sensors {
-                proximity: vec![distance],
+                proximity: vec![distance as f64],
                 temperature: None,
                 light: None,
             });

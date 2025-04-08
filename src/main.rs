@@ -12,6 +12,8 @@ mod lidar;
 mod supersonic;
 // mongodb module
 mod mongodb;
+// logging module
+mod logging;
 
 use r2r::sensor_msgs::msg::LaserScan;
 use r2r::example_interfaces::msg::Float32;
@@ -66,9 +68,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let supersonic_node_cl = Arc::clone(&supersonic_node);
 
     // channel for supersonic sensor readings
-    let (supersonic_tx, mut supersonic_rx) = mpsc::channel::<f32>(100);
+    let (_supersonic_tx, supersonic_rx) = mpsc::channel::<f32>(100);
 
-    tokio::spawn(supersonic::supersonic_process(supersonic_node_cl, supersonic_rx));
+    // Create MongoDB logger
+    let logger = Arc::new(Mutex::new(mongodb::MongoLogger::new(
+        "mongodb://10.170.9.20:27017/",
+        "turtlebot_db",
+        "sensor_logs"
+    ).await?));
+
+    tokio::spawn(supersonic::supersonic_process(
+        supersonic_node_cl,
+        supersonic_rx,
+        logger,
+        "turtle1".to_string(),
+    ));
 
     // navigation process
     tokio::spawn(async move {

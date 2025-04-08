@@ -16,7 +16,7 @@ resize = "0.8.8"
 image = "0.25.6"
 rgb = "0.8.50"
 mongodb = { version = "2.8.0", features = ["tokio-runtime"] }
-chrono = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
 
 [profile.release]
 lto = "fat"
