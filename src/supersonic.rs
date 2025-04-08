@@ -2,8 +2,7 @@ use r2r::example_interfaces::msg::Float32;
 use tokio::sync::mpsc;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use serde_json::json;
-use std::time::{SystemTime, UNIX_EPOCH};
+use crate::logging::{LogEntry, EventType, Status, Sensors};
 
 /// Handles the supersonic sensor data processing and publishing
 /// 
@@ -14,6 +13,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub async fn supersonic_process(
     node: Arc<Mutex<r2r::Node>>,
     mut supersonic_rx: mpsc::Receiver<f32>,
+    logger: Arc<Mutex<crate::mongodb::MongoLogger>>,
+    bot_id: String,
 ) {
     // lock the node and create a publisher for distance readings
     let mut node = node.lock().await;
@@ -45,23 +46,24 @@ pub async fn supersonic_process(
                 println!("Warning: Obstacle detected at {:.2}m", distance);
             }
 
-            // create JSON payload with timestamp and distance data
-            let timestamp = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs();
-            
-            let json_payload = json!({
-                "timestamp": timestamp,
-                "distance": distance,
-                "sensor_type": "supersonic",
-                "unit": "meters",
-                "obstacle_detected": distance < 0.3
+            // Create log entry for the sensor reading
+            let log_entry = LogEntry::new(
+                bot_id.clone(),
+                EventType::Info,
+                "supersonic_reading".to_string(),
+                Status::Success,
+                format!("Supersonic sensor reading: {:.2}m", distance),
+            )
+            .with_sensors(Sensors {
+                proximity: vec![distance],
+                temperature: None,
+                light: None,
             });
 
-            // print the JSON payload
-            // [TODO]: will be replaced with MongoDB insertion later
-            println!("JSON Payload: {}", json_payload);
+            // Log the entry
+            if let Err(e) = logger.lock().await.log_entry(log_entry).await {
+                eprintln!("Failed to log supersonic reading: {}", e);
+            }
         }
         else {
             println!("No supersonic sensor reading available!");

@@ -10,6 +10,8 @@ mod yolo;
 mod lidar;
 // supersonic module
 mod supersonic;
+// mongodb module
+mod mongodb;
 
 use r2r::sensor_msgs::msg::LaserScan;
 use r2r::example_interfaces::msg::Float32;
