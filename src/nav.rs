@@ -84,6 +84,11 @@ pub async fn move_process(
                             if 280.0 > x1 || x1 > 200.0 {
                                 let scaled =  scale_0_to_200(x1);
                                 rotate(cl_2, scaled as f64).await;
+                            } else {
+                                nav_stop(cl_2).await;
+                                while let Ok(value) = yolo_rx.try_recv() {
+                                    println!("received {:?}", value);
+                                }
                             }
 
                             
