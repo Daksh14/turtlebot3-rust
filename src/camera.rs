@@ -18,11 +18,11 @@ pub fn cam_plus_yolo_detect(yolo_tx: Sender<YoloResult>) -> Result<(), ()> {
 
     let res = Resolution {
         width_x: 640,
-        height_y: 360,
+        height_y: 400,
     };
 
     let frame_format = FrameFormat::MJPEG;
-    let fps = 30;
+    let fps = 10;
     let req_format_type = RequestedFormatType::Exact(CameraFormat::new(res, frame_format, fps));
     let format = RequestedFormat::new::<RgbFormat>(req_format_type);
 
