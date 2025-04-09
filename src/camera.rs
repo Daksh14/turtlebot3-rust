@@ -17,12 +17,12 @@ pub fn cam_plus_yolo_detect(yolo_tx: Sender<YoloResult>) -> Result<(), ()> {
     let mut model = yolo::load_model().expect("The model should load");
 
     let res = Resolution {
-        width_x: 1024,
-        height_y: 768,
+        width_x: 800,
+        height_y: 600,
     };
 
     let frame_format = FrameFormat::MJPEG;
-    let fps = 10;
+    let fps = 5;
     let req_format_type = RequestedFormatType::Exact(CameraFormat::new(res, frame_format, fps));
     let format = RequestedFormat::new::<RgbFormat>(req_format_type);
 
