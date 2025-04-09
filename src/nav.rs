@@ -233,10 +233,6 @@ fn scale_0_to_200(value: f32) -> f32 {
     let old_min = 0.0;
     let old_max = 500.0;
 
-    if value < old_min || value > old_max {
-        panic!("Value out of range (0-350): {}", value);
-    }
-
     let normalized = (value - old_min) / (old_max - old_min);
     new_min + normalized * (new_max - new_min)
 }
