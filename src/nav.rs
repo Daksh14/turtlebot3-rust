@@ -237,3 +237,13 @@ fn scale_0_to_200(value: f32) -> f32 {
     let normalized = (value - old_min) / (old_max - old_min);
     new_min + normalized * (new_max - new_min)
 }
+
+fn scale_400_to_0(value: f32) -> f32 {
+    let new_min = 1.0;
+    let new_max = -1.0;
+    let old_min = 0.0;
+    let old_max = 500.0;
+
+    let normalized = (value - old_min) / (old_max - old_min);
+    new_min + normalized * (new_max - new_min)
+}

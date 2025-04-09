@@ -17,8 +17,8 @@ pub fn cam_plus_yolo_detect(yolo_tx: Sender<YoloResult>) -> Result<(), ()> {
     let mut model = yolo::load_model().expect("The model should load");
 
     let res = Resolution {
-        width_x: 640,
-        height_y: 400,
+        width_x: 1024,
+        height_y: 768,
     };
 
     let frame_format = FrameFormat::MJPEG;
