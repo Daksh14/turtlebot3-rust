@@ -79,11 +79,11 @@ pub async fn move_process(
                         for bbox in bboxes {
                             let cl_2 = Arc::clone(&cl);
                             let (x1, y1, x2, y2) = bbox.xyxy();
-                            println!("{:?}", y2)
+                            println!("{:?}", y2);
 
-                            // let scaled =  scale_0_to_200(x1);
+                            let scaled =  scale_0_to_200(x1);
 
-                            // rotate(cl_2, scaled as f64).await;
+                            rotate(cl_2, scaled as f64).await;
                         }
                     }
                     Err(_) => {}
@@ -171,7 +171,7 @@ pub async fn rotate(node: NavNode, z: f64) {
         Err(e) => eprintln!("Failed to publish 360 rotating instructions {}", e),
     }
 
-    sleep(Duration::from_millis(200)).await;
+    sleep(Duration::from_millis(100)).await;
 
     nav_stop(node).await;
 }
@@ -229,8 +229,8 @@ pub async fn nav_stop(node: NavNode) {
 }
 
 fn scale_0_to_200(value: f32) -> f32 {
-    let new_min = 1.0;
-    let new_max = -1.0;
+    let new_min = 2.0;
+    let new_max = -2.0;
     let old_min = 0.0;
     let old_max = 500.0;
 
