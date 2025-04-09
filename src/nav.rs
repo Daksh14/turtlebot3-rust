@@ -79,7 +79,7 @@ pub async fn move_process(
                         for bbox in bboxes {
                             let cl_2 = Arc::clone(&cl);
                             let (x1, y1, x2, y2) = bbox.xyxy();
-                            println!("{:?}", x2)
+                            println!("{:?}", y2)
 
                             // let scaled =  scale_0_to_200(x1);
 
