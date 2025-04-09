@@ -81,7 +81,7 @@ pub async fn move_process(
                             let (x1, y1, x2, y2) = bbox.xyxy();
                             // println!("{:?}", x1);
 
-                            if 260.0 > x1 || x1 > 200.0 {
+                            if 280.0 > x1 || x1 > 200.0 {
                                 let scaled =  scale_0_to_200(x1);
                                 rotate(cl_2, scaled as f64).await;
                             }
