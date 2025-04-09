@@ -33,11 +33,11 @@ pub fn cam_plus_yolo_detect(yolo_tx: Sender<YoloResult>) -> Result<(), ()> {
     camera.open_stream().expect("Stream should start");
 
     loop {
-        let buffer = camera.frame().expect("frame should be retrievable");
+        if let Ok(buffer) = camera.frame() {
+            let img = buffer.decode_image::<RgbFormat>().expect("decoding image to buffer should work");
 
-        let img = buffer.decode_image::<RgbFormat>().expect("decoding image to buffer should work");
-
-        yolo_tx.send(yolo::detect(&mut model, img));
+            yolo_tx.send(yolo::detect(&mut model, img));
+        }
     }
 }
 
