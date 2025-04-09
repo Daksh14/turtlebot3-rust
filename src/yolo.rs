@@ -42,8 +42,8 @@ pub fn load_model() -> Result<Model, Box<dyn Error>> {
         .with_yolo_task(YOLOTask::Detect)
         .with_device(Device::Cpu(0))
         .with_ixx(0, 0, (1, 1, 4).into())
-        .with_ixx(0, 2, (0, 416, 416).into())
-        .with_ixx(0, 3, (0, 416, 416).into())
+        .with_ixx(0, 2, (0, 608, 608).into())
+        .with_ixx(0, 3, (0, 608, 608).into())
         .with_confs(&[0.25])
         .with_names(&YOLOV8_CLASS_LABELS);
 
