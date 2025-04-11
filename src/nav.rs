@@ -4,13 +4,13 @@ use r2r::{
     geometry_msgs::msg::{Twist, Vector3},
 };
 use std::sync::Arc;
+use std::sync::mpsc::Receiver as BlockingRecv;
 use tokio::sync::Mutex;
 use tokio::sync::mpsc::Receiver;
 use tokio::time::{Duration, sleep};
-use std::sync::mpsc::Receiver as BlockingRecv;
 
-use crate::{Sequence, YoloResult};
 use crate::lidar::{self, Direction};
+use crate::{Sequence, YoloResult};
 use usls::Bbox;
 
 type NavNode = Arc<Mutex<Node>>;
@@ -81,17 +81,16 @@ pub async fn move_process(
                             let (x1, y1, x2, y2) = bbox.xyxy();
                             println!("{:?}", x1);
 
-                            if 280.0 > x1 || x1 > 200.0 {
-                                let scaled =  scale_0_to_200(x1);
+                            if 280.0 > x1 && x1 > 200.0 {
+                                let scaled = scale_0_to_200(x1);
                                 rotate(cl_2, scaled as f64).await;
                             } else {
                                 nav_stop(cl_2).await;
+                                println!("centered");
                                 while let Ok(value) = yolo_rx.try_recv() {
                                     println!("received {:?}", value);
                                 }
                             }
-
-                            
                         }
                     }
                     Err(_) => {}

@@ -1,6 +1,6 @@
 // yolo.rs
 use serde::Deserialize;
-use usls::{models::YOLO, Bbox, Device, Nms, Options, Vision, YOLOTask, YOLOVersion};
+use usls::{Bbox, Device, Nms, Options, Vision, YOLOTask, YOLOVersion, models::YOLO};
 
 use crate::YoloResult;
 use image::{DynamicImage, RgbImage};
@@ -8,14 +8,11 @@ use std::{error::Error, fs::File, io::BufReader};
 
 pub type Frame = RgbImage;
 
-const YOLOV8_CLASS_LABELS: [&str; 8] = [
-    "cow",
+const YOLOV8_CLASS_LABELS: [&str; 5] = [
     "football",
     "green cone",
-    "picFrame",
     "purple cone",
     "red cone",
-    "robot drummer",
     "yellow cone",
 ];
 
@@ -42,8 +39,8 @@ pub fn load_model() -> Result<Model, Box<dyn Error>> {
         .with_yolo_task(YOLOTask::Detect)
         .with_device(Device::Cpu(0))
         .with_ixx(0, 0, (1, 1, 4).into())
-        .with_ixx(0, 2, (0, 384, 384).into())
-        .with_ixx(0, 3, (0, 384, 384).into())
+        .with_ixx(0, 2, (0, 480, 480).into())
+        .with_ixx(0, 3, (0, 480, 480).into())
         .with_confs(&[0.25])
         .with_names(&YOLOV8_CLASS_LABELS);
 
