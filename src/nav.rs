@@ -3,104 +3,94 @@ use r2r::{
     Node, Publisher, QosProfile,
     geometry_msgs::msg::{Twist, Vector3},
 };
-use std::sync::Arc;
-use std::sync::mpsc::Receiver as BlockingRecv;
-use tokio::sync::Mutex;
+use rand::distr::{Distribution, Uniform};
 use tokio::sync::mpsc::Receiver;
 use tokio::time::{Duration, sleep};
 
 use crate::lidar::{self, Direction};
-use crate::{Sequence, YoloResult};
-use usls::Bbox;
-
-type NavNode = Arc<Mutex<Node>>;
+use crate::{Sequence, XyXy, publisher::TwistPublisher};
 
 // main navigation logic
 pub async fn move_process(
     // sequence to start the nav move from
     starting_seq: Sequence,
-    nav_node: NavNode,
+    nav_node: crate::Node,
     mut lidar_rx: Receiver<LaserScan>,
-    yolo_rx: BlockingRecv<YoloResult>,
+    mut yolo_rx: Receiver<XyXy>,
 ) {
     let mut current_sequence = starting_seq;
 
-    // detect at least 3 instances of the object to confirm its existence
+    let publisher = TwistPublisher::new(nav_node.clone());
+    let distance_step = Uniform::new(400, 500).expect("Failed to create distance step");
 
     loop {
-        let cl = Arc::clone(&nav_node);
-
         match current_sequence {
             Sequence::Intial360Rotation => {
-                rotate360(cl).await;
+                rotate360(publisher.clone());
 
                 sleep(Duration::from_secs(3)).await;
 
                 current_sequence = Sequence::RandomMovement;
             }
             Sequence::RandomMovement => {
-                let cl = Arc::clone(&cl);
-                let cl_2 = Arc::clone(&cl);
+                let publisher_cl = publisher.clone();
 
-                tokio::spawn(async move {
-                    nav_move(cl, 0.5, 0.0).await;
+                let random_movement_handle = tokio::spawn({
+                    let mut rng = rand::rng();
+
+                    let distance = distance_step.sample(&mut rng) as f64;
+
+                    nav_move(distance, 0.17, publisher_cl)
                 });
 
                 match lidar_rx.recv().await {
                     Some(scan) => {
-                        if let Some(direction) = lidar::lidar_data(scan) {
-                            println!("Detected direction: {:?}", direction);
+                        let direction = lidar::lidar_data(scan);
+                        println!("Detected direction: {:?}", direction);
 
-                            match direction {
-                                Direction::North => {
-                                    nav_stop(Arc::clone(&cl_2)).await;
-                                    nav_move(cl_2, 0.2, 0.3).await;
-                                }
-                                Direction::NorthWest => {
-                                    nav_stop(Arc::clone(&cl_2)).await;
-                                    nav_move(cl_2, 0.2, 0.3).await;
-                                }
-                                Direction::NorthEast => {
-                                    nav_stop(Arc::clone(&cl_2)).await;
-                                    nav_move(cl_2, 0.2, -0.3).await;
-                                }
-                                _ => (),
-                            }
+                        if direction.north {
+                            random_movement_handle.abort();
+                            nav_move(35.0, -0.2, publisher.clone()).await;
+                            rotate(2.0, publisher.clone()).await;
+                        }
+
+                        if direction.north_west {
+                            rotate(2.0, publisher.clone()).await;
+                        }
+
+                        if direction.north_east {
+                            rotate(-2.0, publisher.clone()).await;
+                        }
+
+                        if direction.south_west && direction.west {
+                            rotate(-2.0, publisher.clone()).await;
+                        }
+
+                        if direction.east && direction.south_east {
+                            rotate(2.0, publisher.clone()).await;
                         }
                     }
                     None => {}
                 }
             }
             Sequence::TrackingToCharm => {
-                let cl = Arc::clone(&cl);
+                if let Some((x1, _, _, y2)) = yolo_rx.recv().await {
+                    println!("{:?}", y2);
 
-                match yolo_rx.recv() {
-                    Ok(bboxes) => {
-                        for bbox in bboxes {
-                            let cl_2 = Arc::clone(&cl);
-                            let (x1, y1, x2, y2) = bbox.xyxy();
-                            println!("{:?}", x1);
-
-                            if 280.0 > x1 && x1 > 200.0 {
-                                let scaled = scale_0_to_200(x1);
-                                rotate(cl_2, scaled as f64).await;
-                            } else {
-                                nav_stop(cl_2).await;
-                                println!("centered");
-                                while let Ok(value) = yolo_rx.try_recv() {
-                                    println!("received {:?}", value);
-                                }
-                            }
-                        }
+                    if x1 >= 200.0 && x1 <= 280.0 {
+                        nav_stop(publisher.clone());
+                        println!("centered: publisher forward: {}", scale_600_to_0(y2));
+                    } else {
+                        let scaled = scale_0_to_200(x1);
+                        rotate(scaled as f64, publisher.clone()).await;
                     }
-                    Err(_) => {}
                 }
             }
             Sequence::SharmCollected => {
                 // SharmCollected
             }
             Sequence::Stop => {
-                nav_stop(cl).await;
+                nav_stop(publisher.clone());
                 println!("Stopping stop stop");
 
                 break;
@@ -109,23 +99,20 @@ pub async fn move_process(
     }
 }
 
-pub async fn get_pub(node: NavNode) -> Publisher<Twist> {
-    let mut lock = node.lock().await;
-
-    let publisher = lock
-        .create_publisher::<Twist>("/cmd_vel", QosProfile::default())
-        .unwrap();
-
-    publisher
-}
-
 // move x units in x direction and y units in y direction
-pub async fn nav_move(node: NavNode, distance_x: f64, turn_abs: f64) {
-    let publisher = get_pub(node).await;
+pub async fn nav_move(distance_x: f64, speed: f64, publisher: TwistPublisher) {
+    // stop before putting new instruction
+    nav_stop(publisher.clone());
 
-    let speed: f64 = 0.2;
-    let travel_time = (distance_x / speed).ceil() as u64;
+    let mut speed = speed;
 
+    if (speed == 0.0) {
+        speed = 0.1;
+    }
+
+    let travel_time = (distance_x / speed.abs()).ceil() as u64;
+
+    println!("Speed: {}", speed);
     println!("Travel time: {}", travel_time);
     println!("distance: {}", distance_x);
 
@@ -138,26 +125,24 @@ pub async fn nav_move(node: NavNode, distance_x: f64, turn_abs: f64) {
         angular: Vector3 {
             x: 0.0,
             y: 0.0,
-            z: turn_abs,
+            z: 0.0,
         }, // Rotate slightly
     };
 
     // Publish the initial move message
     match publisher.publish(&twist) {
-        Ok(_) => println!(
-            "Published: linear = {}, angular = {}",
-            twist.linear.x, twist.angular.z
-        ),
+        Ok(_) => (),
         Err(e) => eprintln!("Failed to publish intial move instructions: {}", e),
     }
 
     // Sleep for time needed to reach distance
-    sleep(Duration::from_secs(travel_time)).await;
+    sleep(Duration::from_millis(travel_time)).await;
+
+    nav_stop(publisher);
 }
 
-pub async fn rotate(node: NavNode, z: f64) {
-    let cl = Arc::clone(&node);
-    let publisher = get_pub(cl).await;
+pub async fn rotate(z: f64, publisher: TwistPublisher) {
+    nav_stop(publisher.clone());
 
     let twist = Twist {
         linear: Vector3 {
@@ -180,13 +165,10 @@ pub async fn rotate(node: NavNode, z: f64) {
 
     sleep(Duration::from_millis(100)).await;
 
-    nav_stop(node).await;
+    nav_stop(publisher);
 }
 
-pub async fn rotate360(node: NavNode) {
-    let cl = Arc::clone(&node);
-    let publisher = get_pub(cl).await;
-
+pub async fn rotate360(publisher: TwistPublisher) {
     let twist = Twist {
         linear: Vector3 {
             x: 0.0,
@@ -209,12 +191,10 @@ pub async fn rotate360(node: NavNode) {
     // Sleep for time needed to reach distance
     sleep(Duration::from_secs(5)).await;
 
-    nav_stop(node).await;
+    nav_stop(publisher);
 }
 
-pub async fn nav_stop(node: NavNode) {
-    let publisher = get_pub(node).await;
-
+pub fn nav_stop(publisher: TwistPublisher) {
     let twist = Twist {
         linear: Vector3 {
             x: 0.0,
@@ -236,8 +216,8 @@ pub async fn nav_stop(node: NavNode) {
 }
 
 fn scale_0_to_200(value: f32) -> f32 {
-    let new_min = 1.0;
-    let new_max = -1.0;
+    let new_min = 0.5;
+    let new_max = -0.5;
     let old_min = 0.0;
     let old_max = 500.0;
 
@@ -245,11 +225,11 @@ fn scale_0_to_200(value: f32) -> f32 {
     new_min + normalized * (new_max - new_min)
 }
 
-fn scale_400_to_0(value: f32) -> f32 {
-    let new_min = 1.0;
-    let new_max = -1.0;
-    let old_min = 0.0;
-    let old_max = 500.0;
+fn scale_600_to_0(value: f32) -> f32 {
+    let new_min = 0.0;
+    let new_max = 0.1;
+    let old_min = 200.0;
+    let old_max = 600.0;
 
     let normalized = (value - old_min) / (old_max - old_min);
     new_min + normalized * (new_max - new_min)

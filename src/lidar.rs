@@ -1,36 +1,28 @@
 use std::f32;
 use std::sync::Arc;
 
+use futures::Stream;
 use futures::stream::StreamExt;
 use r2r::QosProfile;
 use r2r::sensor_msgs::msg::LaserScan;
 use tokio::sync::Mutex;
 use tokio::sync::mpsc::Sender;
 
-type LidarNode = Arc<Mutex<r2r::Node>>;
-
 #[derive(Debug)]
-pub enum Direction {
-    North,
-    NorthEast,
-    East,
-    SouthEast,
-    South,
-    SouthWest,
-    West,
-    NorthWest,
+pub struct Direction {
+    pub north: bool,
+    pub north_east: bool,
+    pub east: bool,
+    pub south_east: bool,
+    pub south: bool,
+    pub south_west: bool,
+    pub west: bool,
+    pub north_west: bool,
 }
 
-pub async fn lidar_scan(lidar_node: LidarNode, tx: Sender<LaserScan>) {
-    let mut lock = lidar_node.lock().await;
-    // subscribe to lidar node
-    let qos = QosProfile::default().best_effort();
-    let mut lidar_node_sub = lock
-        .subscribe("/scan", qos)
-        .expect("Subscribing to lidar should work");
-
+pub async fn lidar_scan<T: Stream<Item = LaserScan> + Unpin>(mut stream: T, tx: Sender<LaserScan>) {
     loop {
-        match lidar_node_sub.next().await {
+        match stream.next().await {
             Some(msg) => {
                 if let Err(_) = tx.send(msg).await {
                     break;
@@ -42,69 +34,51 @@ pub async fn lidar_scan(lidar_node: LidarNode, tx: Sender<LaserScan>) {
     }
 }
 
-pub fn lidar_data(data: LaserScan) -> Option<Direction> {
-    let lidar_data = data.ranges;
-    let threshold = 0.5; // Distance threshold for detecting objects
-    let len = lidar_data.len();
+pub fn lidar_data(scan: LaserScan) -> Direction {
+    let detection_threshold = 0.3;
+    let angle_min = scan.angle_min;
+    let angle_increment = scan.angle_increment;
+    let ranges = &scan.ranges;
 
-    let size_of_quater = (len / 8) - 1;
+    let mut dir = Direction {
+        north: false,
+        north_east: false,
+        east: false,
+        south_east: false,
+        south: false,
+        south_west: false,
+        west: false,
+        north_west: false,
+    };
 
-    // there should be 8 quaters, the approx length of the lidar range is 203 elements
-    let quater_one = &lidar_data[0..size_of_quater];
-    let quater_two = &lidar_data[size_of_quater..size_of_quater * 2];
-    let quater_three = &lidar_data[size_of_quater * 2..size_of_quater * 3];
-    let quater_four = &lidar_data[size_of_quater * 3..size_of_quater * 4];
-    let quater_five = &lidar_data[size_of_quater * 4..size_of_quater * 5];
-    let quater_six = &lidar_data[size_of_quater * 5..size_of_quater * 6];
-    let quater_seven = &lidar_data[size_of_quater * 6..size_of_quater * 7];
-    let quater_eight = &lidar_data[size_of_quater * 7..size_of_quater * 8];
+    for (i, &range) in ranges.iter().enumerate() {
+        if range.is_nan() || range > detection_threshold {
+            continue;
+        }
 
-    let min_and_avg_q_one = find_average(find_n_min_values(quater_one.to_owned()));
-    let min_and_avg_q_two = find_average(find_n_min_values(quater_two.to_owned()));
-    let min_and_avg_q_three = find_average(find_n_min_values(quater_three.to_owned()));
-    let min_and_avg_q_four = find_average(find_n_min_values(quater_four.to_owned()));
-    let min_and_avg_q_five = find_average(find_n_min_values(quater_five.to_owned()));
-    let min_and_avg_q_six = find_average(find_n_min_values(quater_six.to_owned()));
-    let min_and_avg_q_seven = find_average(find_n_min_values(quater_seven.to_owned()));
-    let min_and_avg_q_eight = find_average(find_n_min_values(quater_eight.to_owned()));
+        let angle = angle_min + (i as f32) * angle_increment;
+        // Convert angle to degrees and normalize between 0-360
+        let deg = ((angle.to_degrees() + 360.0 + 15.0) % 360.0) as u32;
+        let sector = (deg / 45) as usize;
 
-    if min_and_avg_q_one < threshold {
-        return Some(Direction::North);
+        match sector {
+            0 => dir.north = true,
+            1 => dir.north_east = true,
+            2 => dir.east = true,
+            3 => dir.south_east = true,
+            4 => dir.south = true,
+            5 => dir.south_west = true,
+            6 => dir.west = true,
+            7 => dir.north_west = true,
+            _ => (),
+        };
     }
 
-    if min_and_avg_q_two < threshold {
-        return Some(Direction::NorthEast);
-    }
-
-    if min_and_avg_q_three < threshold {
-        return Some(Direction::East);
-    }
-
-    if min_and_avg_q_four < threshold {
-        return Some(Direction::SouthEast);
-    }
-
-    if min_and_avg_q_five < threshold {
-        return Some(Direction::South);
-    }
-
-    if min_and_avg_q_six < threshold {
-        return Some(Direction::SouthWest);
-    }
-
-    if min_and_avg_q_seven < threshold {
-        return Some(Direction::West);
-    }
-
-    if min_and_avg_q_eight < threshold {
-        return Some(Direction::NorthWest);
-    }
-
-    None
+    dir
 }
 
 fn find_n_min_values(arr: Vec<f32>) -> Vec<f32> {
-    let n = 3;
+    let n = 8;
     let mut data = arr.clone();
 
     data.retain(|&x| !x.is_nan());

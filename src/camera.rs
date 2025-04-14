@@ -1,24 +1,26 @@
+use image::DynamicImage;
 use nokhwa::{
-    Buffer, Camera,
+    Camera,
     pixel_format::RgbFormat,
     utils::{
-        ApiBackend, CameraIndex, FrameFormat, CameraFormat, RequestedFormat, Resolution, RequestedFormatType,
+        ApiBackend, CameraFormat, CameraIndex, FrameFormat, RequestedFormat, RequestedFormatType,
+        Resolution,
     },
 };
-use std::time::Instant;
-use std::sync::mpsc;
-use usls::Bbox;
-use std::sync::mpsc::Sender;
+use tokio::sync::mpsc::Sender;
 
-use crate::{yolo::{self}, YoloResult};
+use crate::{
+    XyXy,
+    error::Error,
+    yolo::{self},
+};
 
-
-pub fn cam_plus_yolo_detect(yolo_tx: Sender<YoloResult>) -> Result<(), ()> {
-    let mut model = yolo::load_model().expect("The model should load");
+pub fn cam_plus_yolo_detect(yolo_tx: Sender<XyXy>) -> Result<(), Error> {
+    let mut model = yolo::load_model()?.model;
 
     let res = Resolution {
-        width_x: 800,
-        height_y: 600,
+        width_x: 640,
+        height_y: 480,
     };
 
     let frame_format = FrameFormat::MJPEG;
@@ -27,26 +29,45 @@ pub fn cam_plus_yolo_detect(yolo_tx: Sender<YoloResult>) -> Result<(), ()> {
     let format = RequestedFormat::new::<RgbFormat>(req_format_type);
 
     let mut camera: Camera =
-        Camera::with_backend(CameraIndex::Index(0), format, ApiBackend::Video4Linux)
-            .expect("Constructing camera should succeed");
+        Camera::with_backend(CameraIndex::Index(0), format, ApiBackend::Video4Linux)?;
 
-    camera.open_stream().expect("Stream should start");
+    camera.open_stream()?;
 
     loop {
-        if let Ok(buffer) = camera.frame() {
-            let img = buffer.decode_image::<RgbFormat>().expect("decoding image to buffer should work");
+        let buffer = camera.frame()?;
 
-            yolo_tx.send(yolo::detect(&mut model, img));
+        if let Ok(img) = buffer.decode_image::<RgbFormat>() {
+            match yolo::detect(&mut model, &[DynamicImage::ImageRgb8(img)]) {
+                Ok(bbox) => {
+                    let _ = yolo_tx.blocking_send(bbox);
+                }
+                Err(e) => {
+                    // stop loop if inference failed for some reason
+                    if let Error::InferenceFailed = e {
+                        break;
+                    }
+                }
+            }
         }
     }
+
+    println!("Camera stream closed");
+
+    Ok(())
 }
 
-pub async fn yolo_detect_test() {
-    let mut model = yolo::load_model().expect("The model should load");
+#[allow(dead_code)]
+pub async fn yolo_detect_test() -> Result<(), Error> {
+    let mut model = yolo::load_model()?.model;
 
     // load the yolo model
     let img_path = "../data/IMG_8405.JPG"; // change the path if needed
-    let img = image::ImageReader::open(img_path).unwrap().decode().unwrap();
+    let img = image::ImageReader::open(img_path)
+        .unwrap()
+        .decode()
+        .unwrap();
 
-    println!("yolo detect test {:?}", yolo::detect(&mut model, img.into()));
+    println!("yolo detect test {:?}", yolo::detect(&mut model, &[img])?);
+
+    Ok(())
 }

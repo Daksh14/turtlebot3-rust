@@ -1,12 +1,12 @@
 // yolo.rs
+use image::DynamicImage;
 use serde::Deserialize;
-use usls::{Bbox, Device, Nms, Options, Vision, YOLOTask, YOLOVersion, models::YOLO};
+use usls::{models::YOLO, Device, Nms, Options, Vision, YOLOTask, YOLOVersion};
 
-use crate::YoloResult;
-use image::{DynamicImage, RgbImage};
-use std::{error::Error, fs::File, io::BufReader};
+use std::path::Path;
+use std::{fs::File, io::BufReader};
 
-pub type Frame = RgbImage;
+use crate::{error::Error, XyXy};
 
 const YOLOV8_CLASS_LABELS: [&str; 5] = [
     "football",
@@ -16,21 +16,39 @@ const YOLOV8_CLASS_LABELS: [&str; 5] = [
     "yellow cone",
 ];
 
+/// Config json file data structure
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 pub struct ModelConfig {
-    // refer to the `data/config.json`
-    pub model_path: String,       // ONNX model absolute path
-    pub class_names: Vec<String>, // array of class names
-    pub input_size: i32,          // model input image size
+    /// ONNX model absolute path
+    pub model_path: String,
+    /// array of class names
+    pub class_names: Vec<String>,
+    /// model input image size
+    pub input_size: i32,
 }
 
 pub struct Model {
     pub model: YOLO,
 }
 
-pub fn load_model() -> Result<Model, Box<dyn Error>> {
-    let model_config = load_model_from_config().unwrap();
+/// load ModelConfig json config file
+fn load_model_file() -> Result<ModelConfig, Error> {
+    // change the path if needed
+    let file = File::open("../data/config.json")?;
+    let reader = BufReader::new(file);
+    let model_config: ModelConfig = serde_json::from_reader(reader)?;
+
+    if !Path::new(&model_config.model_path).exists() {
+        return Err(Error::OnnxModelFileNotFound);
+    }
+
+    Ok(model_config)
+}
+
+/// Load the model to put in the
+pub fn load_model() -> Result<Model, Error> {
+    let model_config = load_model_file()?;
 
     let options = Options::new()
         .with_model(&model_config.model_path)
@@ -44,65 +62,26 @@ pub fn load_model() -> Result<Model, Box<dyn Error>> {
         .with_confs(&[0.25])
         .with_names(&YOLOV8_CLASS_LABELS);
 
-    let model = YOLO::new(options).expect("yolo model to load");
+    let model = YOLO::new(options)?;
 
     println!("Yolo ONNX model loaded.");
 
     Ok(Model { model })
 }
 
-fn load_model_from_config() -> Result<ModelConfig, Box<dyn Error>> {
-    let file = File::open("../data/config.json"); // change the path if needed
-    let file = match file {
-        Ok(file) => file,
-        Err(e) => {
-            println!("{:?}", e);
-            std::process::exit(0)
-        }
-    };
+/// Yolo inference on pre allocated res_box,
+pub fn detect(model: &mut YOLO, img: &[DynamicImage]) -> Result<XyXy, Error> {
+    let mut result = model.run(img)?;
 
-    let reader = BufReader::new(file);
-    let model_config: std::result::Result<ModelConfig, serde_json::Error> =
-        serde_json::from_reader(reader);
-    let model_config = match model_config {
-        Ok(model_config) => model_config,
-        Err(_) => {
-            println!("Invalid config json.");
-            std::process::exit(0)
-        }
-    };
+    // convert option to error, inference failed error
+    let res = result.pop().ok_or(Error::NoDetection)?;
+    let boxes = res.bboxes().ok_or(Error::NoDetection)?;
 
-    if !std::path::Path::new(&model_config.model_path).exists() {
-        println!(
-            "ONNX model in {model_path} does NOT exist.",
-            model_path = model_config.model_path
-        );
-        std::process::exit(0)
+    let bbox = boxes.get(0).ok_or(Error::InferenceFailed)?;
+
+    if bbox.confidence() >= 0.9 {
+        return Ok(bbox.xyxy());
     }
 
-    Ok(model_config)
-}
-
-pub fn detect(model_data: &mut Model, img: Frame) -> YoloResult {
-    let model = &mut model_data.model;
-
-    let result = model.run(&[DynamicImage::ImageRgb8(img)]);
-
-    let mut res_bbox = Vec::with_capacity(2);
-
-    if let Ok(result) = result {
-        for res in result {
-            if let Some(bboxes) = res.bboxes() {
-                for bbox in bboxes {
-                    let conf = bbox.confidence();
-
-                    if conf >= 0.9 {
-                        res_bbox.push(bbox.clone());
-                    }
-                }
-            }
-        }
-    }
-
-    res_bbox
+    Err(Error::NoDetection)
 }
