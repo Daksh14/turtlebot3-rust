@@ -11,6 +11,7 @@ mod publisher;
 /// yolo module
 mod yolo;
 
+use async_cell::sync::AsyncCell;
 use r2r::QosProfile;
 use r2r::sensor_msgs::msg::LaserScan;
 use std::sync::{Arc, Mutex};
@@ -54,7 +55,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let lidar_node = generate_node("lidar_node")?;
 
     // Launch the lidar communication channel
-    let (lidar_tx, lidar_rx) = mpsc::channel::<LaserScan>(100);
+    let cell = AsyncCell::shared();
+    let weak = cell.take_weak();
     let (yolo_tx, yolo_rx) = mpsc::channel::<XyXy>(100);
 
     // camera process + yolo detect
@@ -72,7 +74,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .expect("Subscribing to lidar should work")
         };
 
-        lidar::lidar_scan(&mut lidar_node_sub, lidar_tx).await;
+        lidar::lidar_scan(&mut lidar_node_sub, cell).await;
     });
 
     let cl = Arc::clone(&nav_node);
@@ -81,7 +83,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // this is what the bot is doing at any point in time
         let start_sequence = Sequence::RandomMovement;
 
-        nav::move_process(start_sequence, cl, lidar_rx, yolo_rx).await
+        nav::move_process(start_sequence, cl, weak, yolo_rx).await
     });
 
     loop {

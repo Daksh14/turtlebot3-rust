@@ -1,12 +1,12 @@
 use std::f32;
 use std::sync::Arc;
 
+use async_cell::sync::AsyncCell;
 use futures::Stream;
 use futures::stream::StreamExt;
 use r2r::QosProfile;
 use r2r::sensor_msgs::msg::LaserScan;
 use tokio::sync::Mutex;
-use tokio::sync::mpsc::Sender;
 
 #[derive(Debug)]
 pub struct Direction {
@@ -20,13 +20,14 @@ pub struct Direction {
     pub north_west: bool,
 }
 
-pub async fn lidar_scan<T: Stream<Item = LaserScan> + Unpin>(mut stream: T, tx: Sender<LaserScan>) {
+pub async fn lidar_scan<T: Stream<Item = LaserScan> + Unpin>(
+    mut stream: T,
+    tx: Arc<AsyncCell<LaserScan>>,
+) {
     loop {
         match stream.next().await {
             Some(msg) => {
-                if let Err(_) = tx.send(msg).await {
-                    break;
-                }
+                tx.set(msg);
             }
             // dont do anything if we dont get any lidar data
             None => (),

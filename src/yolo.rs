@@ -1,12 +1,12 @@
 // yolo.rs
 use image::DynamicImage;
 use serde::Deserialize;
-use usls::{models::YOLO, Device, Nms, Options, Vision, YOLOTask, YOLOVersion};
+use usls::{Device, Nms, Options, Vision, YOLOTask, YOLOVersion, models::YOLO};
 
 use std::path::Path;
 use std::{fs::File, io::BufReader};
 
-use crate::{error::Error, XyXy};
+use crate::{XyXy, error::Error};
 
 const YOLOV8_CLASS_LABELS: [&str; 5] = [
     "football",
@@ -35,7 +35,7 @@ pub struct Model {
 /// load ModelConfig json config file
 fn load_model_file() -> Result<ModelConfig, Error> {
     // change the path if needed
-    let file = File::open("../data/config.json")?;
+    let file = File::open("./data/config.json")?;
     let reader = BufReader::new(file);
     let model_config: ModelConfig = serde_json::from_reader(reader)?;
 

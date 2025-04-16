@@ -1,3 +1,6 @@
+use std::thread::spawn;
+
+use async_cell::sync::TakeWeak;
 use r2r::sensor_msgs::msg::LaserScan;
 use r2r::{
     Node, Publisher, QosProfile,
@@ -8,6 +11,7 @@ use tokio::sync::mpsc::Receiver;
 use tokio::time::{Duration, sleep};
 
 use crate::lidar::{self, Direction};
+use crate::publisher;
 use crate::{Sequence, XyXy, publisher::TwistPublisher};
 
 // main navigation logic
@@ -15,7 +19,7 @@ pub async fn move_process(
     // sequence to start the nav move from
     starting_seq: Sequence,
     nav_node: crate::Node,
-    mut lidar_rx: Receiver<LaserScan>,
+    mut lidar_rx: TakeWeak<LaserScan>,
     mut yolo_rx: Receiver<XyXy>,
 ) {
     let mut current_sequence = starting_seq;
@@ -33,45 +37,44 @@ pub async fn move_process(
                 current_sequence = Sequence::RandomMovement;
             }
             Sequence::RandomMovement => {
-                let publisher_cl = publisher.clone();
+                tokio::select! {
+                    lidar = &lidar_rx => {
+                        match lidar {
+                            Some(scan) => {
+                                let direction = lidar::lidar_data(scan);
+                                println!("Detected direction: {:?}", direction);
 
-                let random_movement_handle = tokio::spawn({
-                    let mut rng = rand::rng();
+                                if direction.north {
+                                    nav_move(10.0, -0.2, publisher.clone()).await;
+                                    rotate(0.1, publisher.clone()).await;
+                                }
 
-                    let distance = distance_step.sample(&mut rng) as f64;
+                                if direction.north_west {
+                                    rotate(2.0, publisher.clone()).await;
+                                }
 
-                    nav_move(distance, 0.17, publisher_cl)
-                });
-
-                match lidar_rx.recv().await {
-                    Some(scan) => {
-                        let direction = lidar::lidar_data(scan);
-                        println!("Detected direction: {:?}", direction);
-
-                        if direction.north {
-                            random_movement_handle.abort();
-                            nav_move(35.0, -0.2, publisher.clone()).await;
-                            rotate(2.0, publisher.clone()).await;
-                        }
-
-                        if direction.north_west {
-                            rotate(2.0, publisher.clone()).await;
-                        }
-
-                        if direction.north_east {
-                            rotate(-2.0, publisher.clone()).await;
-                        }
-
-                        if direction.south_west && direction.west {
-                            rotate(-2.0, publisher.clone()).await;
-                        }
-
-                        if direction.east && direction.south_east {
-                            rotate(2.0, publisher.clone()).await;
+                                if direction.north_east {
+                                    rotate(-2.0, publisher.clone()).await;
+                                }
+                            }
+                            None => {}
                         }
                     }
-                    None => {}
-                }
+                    yolo = yolo_rx.recv() => {
+                        match yolo {
+                            Some(_) => {
+                                current_sequence = Sequence::TrackingToCharm;
+                            },
+                            _ => (),
+                        }
+                    }
+                    _ = nav_move(
+                        distance_step.sample(&mut rand::rng()) as f64,
+                        0.17,
+                        publisher.clone(),
+                    ) => {
+                    }
+                };
             }
             Sequence::TrackingToCharm => {
                 if let Some((x1, _, _, y2)) = yolo_rx.recv().await {
