@@ -48,6 +48,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gcc-arm-linux-gnueabi \
     gcc-arm-linux-gnueabihf \
+    gcc-aarch64-linux-gnu \ 
     g++-arm-linux-gnueabi \
     g++-arm-linux-gnueabihf \
     git \

@@ -60,7 +60,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (yolo_tx, yolo_rx) = mpsc::channel::<XyXy>(100);
 
     // camera process + yolo detect
-    std::thread::spawn(move || camera::cam_plus_yolo_detect(yolo_tx));
+    std::thread::spawn(move || {
+        let cam = camera::cam_plus_yolo_detect(yolo_tx);
+
+        println!("{:?}", cam);
+    });
 
     let lidar_cl = Arc::clone(&lidar_node);
     // lidar process
@@ -79,12 +83,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cl = Arc::clone(&nav_node);
     // navigation process
-    tokio::spawn(async move {
-        // this is what the bot is doing at any point in time
-        let start_sequence = Sequence::RandomMovement;
-
-        nav::move_process(start_sequence, cl, weak, yolo_rx).await
-    });
+    //     tokio::spawn(async move {
+    //         // this is what the bot is doing at any point in time
+    //         let start_sequence = Sequence::RandomMovement;
+    //
+    //         nav::move_process(start_sequence, cl, weak, yolo_rx).await
+    //     });
 
     loop {
         if let Ok(mut nav_handle) = nav_node.lock() {

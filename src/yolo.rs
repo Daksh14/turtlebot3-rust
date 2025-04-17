@@ -28,6 +28,7 @@ pub struct ModelConfig {
     pub input_size: i32,
 }
 
+#[derive(Debug)]
 pub struct Model {
     pub model: YOLO,
 }
@@ -35,7 +36,7 @@ pub struct Model {
 /// load ModelConfig json config file
 fn load_model_file() -> Result<ModelConfig, Error> {
     // change the path if needed
-    let file = File::open("./data/config.json")?;
+    let file = File::open("../data/config.json")?;
     let reader = BufReader::new(file);
     let model_config: ModelConfig = serde_json::from_reader(reader)?;
 
