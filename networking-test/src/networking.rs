@@ -29,6 +29,7 @@ async fn connect_with_retry(addr: &str) -> Result<(), io::Error> { //Tries to co
     let mut tries = 0;
     loop {
         match TcpStream::connect(addr).await {
+            
             Ok(stream) => {
                 println!("Connected to {}.", addr);
                 tokio::spawn(talk_to_remote(stream));
@@ -63,7 +64,7 @@ async fn handle_incoming(mut socket: TcpStream) { //Tries to read the message fr
     loop {
         match socket.read(&mut buffer).await {
             Ok(0) => {
-                println!("Connection closed");
+                println!("A connection from {} closed", peer_ip);
                 return;
             }
             Ok(n) => {
