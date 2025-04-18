@@ -9,6 +9,8 @@ use std::{error::Error, fs::File, io::BufReader};
 use std::path::Path;
 use std::io::{ErrorKind};
 use std::net::SocketAddr;
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
 
 #[derive(Serialize, Deserialize)]
 pub struct IPs {
@@ -23,13 +25,14 @@ async fn print_peer_ip(socket: &TcpStream) -> Result<SocketAddr, io::Error> { //
     socket.peer_addr()
 }
 
-async fn connect_with_retry(addr: &str) -> Result<TcpStream, io::Error> { //Tries to connect to the IP/stream.
+async fn connect_with_retry(addr: &str) -> Result<(), io::Error> { //Tries to connect to the IP/stream. It will then loop.
     let mut tries = 0;
     loop {
         match TcpStream::connect(addr).await {
             Ok(stream) => {
                 println!("Connected to {}.", addr);
-                return Ok(stream);
+                tokio::spawn(talk_to_remote(stream));
+                return Ok(())
             }
             Err(e) => {
                 println!("Failed to connect to {}: {}. Retrying in 3s...", addr, e);
@@ -78,19 +81,15 @@ async fn listen_on_port(port: u16) -> Result<(),Box<dyn Error>> { //Listener tas
     let listener = TcpListener::bind(("0.0.0.0", port)).await?;
     println!("Listening on port {}", port);
     
-    match timeout(Duration::from_secs(15), listener.accept()).await {
-        Ok(Ok((socket, addr))) => {
+    match listener.accept().await {
+        Ok((socket, addr)) => {
             println!("Accepted connection from {}", addr);
             tokio::spawn(handle_incoming(socket));
             Ok(())
         }
-        Ok(Err(e)) => {
+        Err(e) => {
             eprintln!("Error accepting connection: {}", e);
             Err(Box::new(e))
-        }
-        Err(_) => {
-            println!("Timed out waiting for connection.");
-            Err(Box::new(io::Error::new(ErrorKind::TimedOut, "Connection timed out.")))
         }
     }
 }
@@ -153,11 +152,9 @@ async fn main() {
         tasks.push(listen_task);
         
         let connect_task = tokio::spawn(async move { //Try to open a stream
-            match connect_with_retry(&addr).await{
-                Ok(stream) => talk_to_remote(stream).await, //If succeeded, we try to talk in a loop.
-                Err(e) => eprintln!("Failed to connect to: {}, error {}",addr,e), //If failed, we print this error.
+            if let Err(e) = connect_with_retry(&addr).await {
+                eprintln!("Failed to connect to: {}, {}", addr, e);
             }
-            
         });
         
         tasks.push(connect_task);
@@ -172,14 +169,11 @@ async fn main() {
         
     tasks.push(listening_task);
     
-    let connecting_task = tokio::spawn(async move {
-    
+    let connecting_task = tokio::spawn(async move { //Try to open a stream
         let addr = "127.0.0.1:5900";
-        match connect_with_retry(&addr).await{
-            Ok(stream) => {println!("Testing print!"); talk_to_remote(stream).await},
-            Err(e) => eprintln!("Failed to connect to localhost somehow: {}, error {}",addr,e),
+        if let Err(e) = connect_with_retry(addr).await {
+            eprintln!("Failed to connect to: {}, {}", addr, e);
         }
-    
     });
     
     tasks.push(connecting_task);
