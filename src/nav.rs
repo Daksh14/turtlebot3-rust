@@ -78,11 +78,15 @@ pub async fn move_process(
             }
             Sequence::TrackingToCharm => {
                 if let Some((x1, _, _, y2)) = yolo_rx.recv().await {
-                    println!("{:?}", y2);
-
+                    println!("y2: {:?}", y2);
+                    println!("x1: {:?}", x1);
+                    // this means we're centered!
                     if x1 >= 200.0 && x1 <= 280.0 {
                         nav_stop(publisher.clone());
-                        println!("centered: publisher forward: {}", scale_600_to_0(y2));
+
+                        if y2 < 480.0 {
+                            nav_move(10.0, 0.1, publisher.clone()).await;
+                        }
                     } else {
                         let scaled = scale_0_to_200(x1);
                         rotate(scaled as f64, publisher.clone()).await;

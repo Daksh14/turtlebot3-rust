@@ -83,12 +83,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cl = Arc::clone(&nav_node);
     // navigation process
-    //     tokio::spawn(async move {
-    //         // this is what the bot is doing at any point in time
-    //         let start_sequence = Sequence::RandomMovement;
-    //
-    //         nav::move_process(start_sequence, cl, weak, yolo_rx).await
-    //     });
+    tokio::spawn(async move {
+        // this is what the bot is doing at any point in time
+        let start_sequence = Sequence::RandomMovement;
+
+        nav::move_process(start_sequence, cl, weak, yolo_rx).await
+    });
 
     loop {
         if let Ok(mut nav_handle) = nav_node.lock() {
