@@ -4,9 +4,7 @@ use std::sync::Arc;
 use async_cell::sync::AsyncCell;
 use futures::Stream;
 use futures::stream::StreamExt;
-use r2r::QosProfile;
 use r2r::sensor_msgs::msg::LaserScan;
-use tokio::sync::Mutex;
 
 #[derive(Debug)]
 pub struct Direction {
@@ -76,22 +74,4 @@ pub fn lidar_data(scan: LaserScan) -> Direction {
     }
 
     dir
-}
-
-fn find_n_min_values(arr: Vec<f32>) -> Vec<f32> {
-    let n = 8;
-    let mut data = arr.clone();
-
-    data.retain(|&x| !x.is_nan());
-
-    // Sort the array
-    data.sort_by(|a, b| a.partial_cmp(b).unwrap());
-
-    // Get the n smallest values
-    data.iter().take(n).cloned().collect()
-}
-
-fn find_average(arr: Vec<f32>) -> f32 {
-    let sum: f32 = arr.iter().sum();
-    sum / arr.len() as f32
 }

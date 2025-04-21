@@ -71,18 +71,13 @@ pub fn load_model() -> Result<Model, Error> {
 }
 
 /// Yolo inference on pre allocated res_box,
-pub fn detect(model: &mut YOLO, img: &[DynamicImage]) -> Result<XyXy, Error> {
-    let mut result = model.run(img)?;
+pub fn detect(model: &mut YOLO, img: &[DynamicImage]) -> Option<XyXy> {
+    let popped = model.run(img).ok()?.pop()?;
 
     // convert option to error, inference failed error
-    let res = result.pop().ok_or(Error::NoDetection)?;
-    let boxes = res.bboxes().ok_or(Error::NoDetection)?;
-
-    let bbox = boxes.get(0).ok_or(Error::InferenceFailed)?;
-
-    if bbox.confidence() >= 0.9 {
-        return Ok(bbox.xyxy());
-    }
-
-    Err(Error::NoDetection)
+    popped
+        .bboxes()
+        .and_then(|x| x.get(0))
+        .filter(|&bbox| bbox.confidence() >= 0.9)
+        .map(usls::Bbox::xyxy)
 }

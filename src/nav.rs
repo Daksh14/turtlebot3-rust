@@ -1,17 +1,11 @@
-use std::thread::spawn;
-
 use async_cell::sync::TakeWeak;
+use r2r::geometry_msgs::msg::{Twist, Vector3};
 use r2r::sensor_msgs::msg::LaserScan;
-use r2r::{
-    Node, Publisher, QosProfile,
-    geometry_msgs::msg::{Twist, Vector3},
-};
 use rand::distr::{Distribution, Uniform};
 use tokio::sync::mpsc::Receiver;
 use tokio::time::{Duration, sleep};
 
-use crate::lidar::{self, Direction};
-use crate::publisher;
+use crate::lidar::{self};
 use crate::{Sequence, XyXy, publisher::TwistPublisher};
 
 // main navigation logic
@@ -19,7 +13,7 @@ pub async fn move_process(
     // sequence to start the nav move from
     starting_seq: Sequence,
     nav_node: crate::Node,
-    mut lidar_rx: TakeWeak<LaserScan>,
+    lidar_rx: TakeWeak<LaserScan>,
     mut yolo_rx: Receiver<XyXy>,
 ) {
     let mut current_sequence = starting_seq;
@@ -30,7 +24,7 @@ pub async fn move_process(
     loop {
         match current_sequence {
             Sequence::Intial360Rotation => {
-                rotate360(publisher.clone());
+                rotate360(publisher.clone()).await;
 
                 sleep(Duration::from_secs(3)).await;
 
@@ -109,7 +103,7 @@ pub async fn nav_move(distance_x: f64, speed: f64, publisher: TwistPublisher) {
 
     let mut speed = speed;
 
-    if (speed == 0.0) {
+    if speed == 0.0 {
         speed = 0.1;
     }
 

@@ -13,7 +13,6 @@ mod yolo;
 
 use async_cell::sync::AsyncCell;
 use r2r::QosProfile;
-use r2r::sensor_msgs::msg::LaserScan;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 
@@ -48,7 +47,7 @@ pub enum Sequence {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // duration of each node spin
-    let node_spin_dur = std::time::Duration::from_millis(10);
+    let node_spin_dur = std::time::Duration::from_millis(5);
 
     // setup all the nodes
     let nav_node = generate_node("nav_node")?;
@@ -57,7 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Launch the lidar communication channel
     let cell = AsyncCell::shared();
     let weak = cell.take_weak();
-    let (yolo_tx, yolo_rx) = mpsc::channel::<XyXy>(100);
+    let (yolo_tx, yolo_rx) = mpsc::channel::<XyXy>(1000);
 
     // camera process + yolo detect
     std::thread::spawn(move || {
@@ -83,12 +82,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cl = Arc::clone(&nav_node);
     // navigation process
-    //     tokio::spawn(async move {
-    //         // this is what the bot is doing at any point in time
-    //         let start_sequence = Sequence::RandomMovement;
-    //
-    //         nav::move_process(start_sequence, cl, weak, yolo_rx).await
-    //     });
+    tokio::spawn(async move {
+        // this is what the bot is doing at any point in time
+        let start_sequence = Sequence::RandomMovement;
+
+        nav::move_process(start_sequence, cl, weak, yolo_rx).await
+    });
 
     loop {
         if let Ok(mut nav_handle) = nav_node.lock() {

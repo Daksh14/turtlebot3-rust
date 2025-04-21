@@ -7,8 +7,6 @@ use nokhwa::NokhwaError;
 pub enum Error {
     OnnxModelFileNotFound,
     InvalidJSONConfgiFile,
-    NoDetection,
-    InferenceFailed,
     CameraFailed,
     OtherError(anyhow::Error),
 }
@@ -18,8 +16,6 @@ impl Display for Error {
         match self {
             Error::OnnxModelFileNotFound => write!(f, "ONNX model file not found"),
             Error::InvalidJSONConfgiFile => write!(f, "Invalid JSON config file"),
-            Error::NoDetection => write!(f, "No detection"),
-            Error::InferenceFailed => write!(f, "Inference failed"),
             Error::CameraFailed => write!(f, "Camera failed to open"),
             Error::OtherError(e) => write!(f, "{:?}", e),
         }

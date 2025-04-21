@@ -34,31 +34,23 @@ pub fn cam_plus_yolo_detect(yolo_tx: Sender<XyXy>) -> Result<(), Error> {
     camera.open_stream()?;
 
     loop {
-        let buffer = camera.frame()?;
+        let buffer = camera
+            .frame()
+            .and_then(|buffer| buffer.decode_image::<RgbFormat>());
 
-        if let Ok(img) = buffer.decode_image::<RgbFormat>() {
-            match yolo::detect(&mut model, &[DynamicImage::ImageRgb8(img)]) {
-                Ok(bbox) => {
-                    let _ = yolo_tx.blocking_send(bbox);
-                }
-                Err(e) => {
-                    // stop loop if inference failed for some reason
-                    if let Error::InferenceFailed = e {
-                        break;
-                    }
-                }
+        if let Ok(img) = buffer {
+            println!("frame");
+
+            if let Some(bbox) = yolo::detect(&mut model, &[DynamicImage::ImageRgb8(img)]) {
+                let _ = yolo_tx.blocking_send(bbox);
             }
         }
     }
-
-    println!("Camera stream closed");
-
-    Ok(())
 }
 
 #[allow(dead_code)]
-pub async fn yolo_detect_test() -> Result<(), Error> {
-    let mut model = yolo::load_model()?.model;
+pub async fn yolo_detect_test() -> Option<()> {
+    let mut model = yolo::load_model().ok()?.model;
 
     // load the yolo model
     let img_path = "../data/IMG_8405.JPG"; // change the path if needed
@@ -69,5 +61,5 @@ pub async fn yolo_detect_test() -> Result<(), Error> {
 
     println!("yolo detect test {:?}", yolo::detect(&mut model, &[img])?);
 
-    Ok(())
+    Some(())
 }
