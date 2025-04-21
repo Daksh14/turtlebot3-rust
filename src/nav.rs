@@ -64,7 +64,7 @@ pub async fn move_process(
                     }
                     _ = nav_move(
                         distance_step.sample(&mut rand::rng()) as f64,
-                        0.17,
+                        0.2,
                         publisher.clone(),
                     ) => {
                     }
@@ -72,11 +72,12 @@ pub async fn move_process(
             }
             Sequence::TrackingToCharm => {
                 if let Some((x1, _, _, y2)) = yolo_rx.recv().await {
-                    println!("{:?}", y2);
-
                     if x1 >= 200.0 && x1 <= 280.0 {
                         nav_stop(publisher.clone());
-                        println!("centered: publisher forward: {}", scale_600_to_0(y2));
+
+                        if y2 < 450.0 {
+                            nav_move(10.0, 0.17, publisher.clone()).await;
+                        }
                     } else {
                         let scaled = scale_0_to_200(x1);
                         rotate(scaled as f64, publisher.clone()).await;
@@ -217,16 +218,6 @@ fn scale_0_to_200(value: f32) -> f32 {
     let new_max = -0.5;
     let old_min = 0.0;
     let old_max = 500.0;
-
-    let normalized = (value - old_min) / (old_max - old_min);
-    new_min + normalized * (new_max - new_min)
-}
-
-fn scale_600_to_0(value: f32) -> f32 {
-    let new_min = 0.0;
-    let new_max = 0.1;
-    let old_min = 200.0;
-    let old_max = 600.0;
 
     let normalized = (value - old_min) / (old_max - old_min);
     new_min + normalized * (new_max - new_min)

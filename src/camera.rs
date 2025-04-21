@@ -39,8 +39,6 @@ pub fn cam_plus_yolo_detect(yolo_tx: Sender<XyXy>) -> Result<(), Error> {
             .and_then(|buffer| buffer.decode_image::<RgbFormat>());
 
         if let Ok(img) = buffer {
-            println!("frame");
-
             if let Some(bbox) = yolo::detect(&mut model, &[DynamicImage::ImageRgb8(img)]) {
                 let _ = yolo_tx.blocking_send(bbox);
             }
