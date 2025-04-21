@@ -1,7 +1,5 @@
 # Turtle bot 3 simulation 
 
-![image](https://github.com/user-attachments/assets/8e3a2f0a-4adb-411f-b9b3-3c234cdce63e)
-
 
 Simulation software for the turtleobot3 https://emanual.robotis.com/docs/en/platform/turtlebot3/overview/ (BURGER)
 
