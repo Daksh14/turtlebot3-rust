@@ -79,19 +79,27 @@ async fn handle_incoming(mut socket: TcpStream, key: Arc<String>) { //Tries to r
     }
 }
 
-async fn listen_on_port(port: u16, key: Arc<String>) -> Result<(),Box<dyn Error>> { //Listener task.
-    let listener = TcpListener::bind(("0.0.0.0", port)).await?;
-    println!("Listening on port {}", port);
-    
-    match listener.accept().await {
-        Ok((socket, addr)) => {
-            println!("Accepted connection from {}", addr);
-            tokio::spawn(handle_incoming(socket, key));
-            Ok(())
-        }
+async fn listen_on_port(port: u16, key: Arc<String>) {
+    let listener = match TcpListener::bind(("0.0.0.0", port)).await {
+        Ok(listener) => listener,
         Err(e) => {
-            eprintln!("Error accepting connection: {}", e);
-            Err(Box::new(e))
+            eprintln!("Failed to bind to port {}: {}", port, e);
+            return;  // Exit the method early on error
+        }
+    };
+
+    println!("Listening on port {}", port);
+
+    loop {
+        match listener.accept().await {
+            Ok((socket, addr)) => {
+                println!("Accepted connection from {}", addr);
+                let key_clone = Arc::clone(&key);
+                tokio::spawn(handle_incoming(socket, key_clone));
+            }
+            Err(e) => {
+                eprintln!("Error accepting connection: {}", e);
+            }
         }
     }
 }
@@ -143,20 +151,38 @@ async fn main() {
     // Define remote IPs and ports
     let mut current_port = 5000;
     let mut tasks = Vec::new();
+    
+    //Open and try ten ports.
+
+    let mut successful = false;
+
+    while current_port <= 5010 {
+    
+        match TcpListener::bind(("0.0.0.0", current_port)).await {
+            Ok(listener) => {
+                let key_clone = Arc::clone(&arc_key);
+                tokio::spawn(listen_on_port(current_port, key_clone));
+                successful = true;
+                break;
+            }
+            
+            Err(e) => {
+                eprintln!("Failed to bind to port {}: {}", current_port, e);
+                current_port += 1;
+                }
+            }
+        }
+
+    if !successful {
+        eprintln!("Failed to bind to any ports from 5000 to 5010.");
+        std::process::exit(1);
+    }
 
     for remote in &ips.ip_addresses {
         let remote_with_port = format!("{}:{}", remote, &current_port);  //Concatenate IP with port
         let addr = remote_with_port.clone();
         let key_copy_listen = Arc::clone(&arc_key);
         let key_copy_write = Arc::clone(&arc_key);
-        
-        let listen_task = tokio::spawn(async move {
-            if let Err(e) = listen_on_port(current_port, key_copy_listen).await {
-                eprintln!("Failed to listen on port {}: {}", current_port, e);
-            }
-        });
-        
-        tasks.push(listen_task);
         
         let connect_task = tokio::spawn(async move { //Try to open a stream
             if let Err(e) = connect_with_retry(&addr, key_copy_write).await {
@@ -165,7 +191,6 @@ async fn main() {
         });
         
         tasks.push(connect_task);
-        current_port+=1;
     }
     
     //Debug for localhost. The below should be commented out in the official release.
@@ -173,14 +198,8 @@ async fn main() {
     let key_copy_listen_test = Arc::clone(&arc_key);
     let key_copy_write_test = Arc::clone(&arc_key);
     
-    let listening_task = tokio::spawn(async move { //Test connection to localhost (should work!)
-        let listener = listen_on_port(5900,key_copy_listen_test).await;
-    });
-        
-    tasks.push(listening_task);
-    
     let connecting_task = tokio::spawn(async move { //Try to open a stream
-        let addr = "127.0.0.1:5900";
+        let addr = "127.0.0.1:5000";
         if let Err(e) = connect_with_retry(addr, key_copy_write_test).await {
             eprintln!("Failed to connect to: {}, {}", addr, e);
         }
