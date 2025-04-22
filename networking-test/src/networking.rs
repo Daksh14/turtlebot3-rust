@@ -12,6 +12,7 @@ use std::net::SocketAddr;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use std::sync::Arc;
+use hex;
 
 #[derive(Serialize, Deserialize)]
 pub struct IPs {
@@ -61,7 +62,10 @@ async fn handle_incoming(mut socket: TcpStream, key: Arc<String>) { //Tries to r
     };
 
     let mut buffer = [0u8; 1024];
+    type HmacSha256 = Hmac<Sha256>;
     println!("Opening a Reader.");
+    //Notes: Add a way to block too long messages
+    //Implement HMAC
     loop {
         match socket.read(&mut buffer).await {
             Ok(0) => {
@@ -84,7 +88,7 @@ async fn listen_on_port(port: u16, key: Arc<String>) {
         Ok(listener) => listener,
         Err(e) => {
             eprintln!("Failed to bind to port {}: {}", port, e);
-            return;  // Exit the method early on error
+            return;  //Exit the method early on error
         }
     };
 
@@ -106,6 +110,15 @@ async fn listen_on_port(port: u16, key: Arc<String>) {
 
 async fn talk_to_remote(mut stream: TcpStream, key: Arc<String>) { //Talker task.
 
+    type HmacSha256 = Hmac<Sha256>;
+    
+    let mut mac = HmacSha256::new_from_slice(&*key.as_bytes()).expect("HMAC accepts our key");
+    mac.update(b"message");
+    let result = mac.finalize().into_bytes();
+    //mac.update(b"hello"); //Look these two up online to verify
+    //let result2 = mac.finalize();
+    let hex = hex::encode(result);
+    
     let peer_ip = match print_peer_ip(&stream).await { //Get and store the remote IP address of the remote connection.
         Ok(addr) => addr,
         Err(e) => {
@@ -116,7 +129,7 @@ async fn talk_to_remote(mut stream: TcpStream, key: Arc<String>) { //Talker task
 
     loop {
         let test_formatting = format!("Hello from server! Your smelly key is: {}\n", key);
-        if let Err(e) = stream.write(test_formatting.as_bytes()).await {
+        if let Err(e) = stream.write((test_formatting + " " + &hex + " ").as_bytes()).await { //what is this?
             println!("Error writing to remote: {}", e);
             return;
         }
@@ -148,7 +161,7 @@ async fn main() {
         println!("{} is the address.", x);
     }
 
-    // Define remote IPs and ports
+    //Define remote IPs and ports.
     let mut current_port = 5000;
     let mut tasks = Vec::new();
     
@@ -207,11 +220,22 @@ async fn main() {
     
     tasks.push(connecting_task);
     
-    //println!("secret key is: {}",&ips.secret_key);
-    
     //Note: Everything above this should be commented out in the official release.
     
     for t in tasks{ //Run all the tasks, listeners and streams
         let _ = t.await;
     }
+    
+    println!("<<All connections have been attempted or initialized. We will keep listening and writing! Press Ctrl+C to terminate this program.>>");
+
+    //Match the ctrl_c signal, which will kill our program.
+    match signal::ctrl_c().await {
+        Ok(()) => {
+            println!("\nExiting program.");
+        }
+        Err(err) => {
+            eprintln!("Failed to listen for shutdown signal: {}", err);
+        }
+    }
+    
 }
