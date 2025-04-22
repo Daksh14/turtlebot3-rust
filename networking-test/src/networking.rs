@@ -4,6 +4,7 @@ use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
 use tokio::task;
 use tokio::time::{sleep, Duration, timeout};
+use tokio::signal;
 use serde::{Deserialize, Serialize};
 use std::{error::Error, fs::File, io::BufReader};
 use std::path::Path;
@@ -226,7 +227,7 @@ async fn main() {
         let _ = t.await;
     }
     
-    println!("<<All connections have been attempted or initialized. We will keep listening and writing! Press Ctrl+C to terminate this program.>>");
+    println!("\n<<All connections have been attempted or initialized. We will keep listening and writing! Press Ctrl+C to terminate this program.>>\n");
 
     //Match the ctrl_c signal, which will kill our program.
     match signal::ctrl_c().await {
