@@ -61,11 +61,12 @@ async fn handle_incoming(mut socket: TcpStream, key: Arc<String>) { //Tries to r
             return;
         }
     };
-
-    let mut buffer = [0u8; 1024];
+    const maximum_size: usize = 1024;
+    const hmac_size: usize = 64;
+    let mut buffer = [0u8; maximum_size + hmac_size];
     type HmacSha256 = Hmac<Sha256>;
     println!("Opening a Reader.");
-    //Notes: Add a way to block too long messages
+    //Notes: Add a way to block too long messages. Dropped this as a priority.
     //Implement HMAC
     loop {
         match socket.read(&mut buffer).await {
@@ -74,7 +75,39 @@ async fn handle_incoming(mut socket: TcpStream, key: Arc<String>) { //Tries to r
                 return;
             }
             Ok(n) => {
-                println!("Received (incoming) from {}: {}", peer_ip,String::from_utf8_lossy(&buffer[..n]));
+                
+                if n < hmac_size {
+                    println!("Message too short ({} bytes) from {}", n, peer_ip);
+                    continue;
+                }
+
+                let (msg, received_hmac) = buffer[..n].split_at(n - hmac_size);
+                let message = String::from_utf8_lossy(msg);
+                let message2 = String::from_utf8_lossy(received_hmac);
+                println!("Massage1: {}", message);
+                println!("Massage2: {}", message2);
+
+                let mut mac = HmacSha256::new_from_slice(&*key.as_bytes()).expect("HMAC accepts our key");
+                mac.update(msg);
+                
+                match hex::decode(received_hmac.as_ref()) {
+                    Ok(decoded_hmac) => {
+                        match mac.verify_slice(&decoded_hmac) {
+                            Ok(_) => println!("Wowzers!"),
+                            Err(_) => {
+                                println!("Invalid HMAC from {}", peer_ip);
+                                continue;
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        println!("Invalid hex format from {}: {}", peer_ip, e);
+                        continue;
+                    }
+                }
+                
+                //let message = String::from_utf8_lossy(msg);
+                println!("Received (valid) from {}: {}", peer_ip, message);
             }
             Err(e) => {
                 println!("Error reading incoming: {}", e);
@@ -114,11 +147,8 @@ async fn talk_to_remote(mut stream: TcpStream, key: Arc<String>) { //Talker task
     type HmacSha256 = Hmac<Sha256>;
     
     let mut mac = HmacSha256::new_from_slice(&*key.as_bytes()).expect("HMAC accepts our key");
-    mac.update(b"message");
-    let result = mac.finalize().into_bytes();
     //mac.update(b"hello"); //Look these two up online to verify
     //let result2 = mac.finalize();
-    let hex = hex::encode(result);
     
     let peer_ip = match print_peer_ip(&stream).await { //Get and store the remote IP address of the remote connection.
         Ok(addr) => addr,
@@ -130,7 +160,13 @@ async fn talk_to_remote(mut stream: TcpStream, key: Arc<String>) { //Talker task
 
     loop {
         let test_formatting = format!("Hello from server! Your smelly key is: {}\n", key);
-        if let Err(e) = stream.write((test_formatting + " " + &hex + " ").as_bytes()).await { //what is this?
+        let mut temp = mac.clone();
+        temp.update(test_formatting.as_bytes());
+        let result = temp.finalize().into_bytes();
+        let hex = hex::encode(result);
+        let printed_hex = hex.clone();
+        
+        if let Err(e) = stream.write((test_formatting + &printed_hex).as_bytes()).await { //what is this?
             println!("Error writing to remote: {}", e);
             return;
         }
@@ -164,31 +200,41 @@ async fn main() {
 
     //Define remote IPs and ports.
     let mut current_port = 5000;
+    let mut tries = 0;
     let mut tasks = Vec::new();
     
     //Open and try ten ports.
 
     let mut successful = false;
 
-    while current_port <= 5010 {
-    
-        match TcpListener::bind(("0.0.0.0", current_port)).await {
-            Ok(listener) => {
+    while tries <= 5 {
+        
+        let result = timeout(Duration::from_secs(2), TcpListener::bind(("0.0.0.0", current_port))).await;
+        match result {
+            Ok(Ok(listener)) => {
+                // Successfully bound to the port, spawn listener task
                 let key_clone = Arc::clone(&arc_key);
                 tokio::spawn(listen_on_port(current_port, key_clone));
                 successful = true;
                 break;
             }
-            
-            Err(e) => {
+            Ok(Err(e)) => {
+                // Failed to bind to the port
                 eprintln!("Failed to bind to port {}: {}", current_port, e);
-                current_port += 1;
-                }
+                tries += 1;
+                sleep(Duration::from_millis(1000)).await; // Wait before retrying
+            }
+            Err(_) => {
+                // Timeout occurred
+                eprintln!("Timeout occurred while trying to bind to port {}", current_port);
+                tries += 1;
+                sleep(Duration::from_millis(1000)).await; // Wait before retrying
             }
         }
+    }
 
     if !successful {
-        eprintln!("Failed to bind to any ports from 5000 to 5010.");
+        eprintln!("Failed to bind port {} after many tries. Program is exiting early.", current_port);
         std::process::exit(1);
     }
 
