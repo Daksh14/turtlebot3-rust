@@ -77,7 +77,7 @@ pub fn detect(model: &mut YOLO, img: &[DynamicImage]) -> Option<XyXy> {
     // convert option to error, inference failed error
     popped
         .bboxes()
-        .and_then(|x| x.get(0))
+        .and_then(|x| x.first())
         .filter(|&bbox| bbox.confidence() >= 0.9)
         .map(usls::Bbox::xyxy)
 }

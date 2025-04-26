@@ -23,12 +23,8 @@ pub async fn lidar_scan<T: Stream<Item = LaserScan> + Unpin>(
     tx: Arc<AsyncCell<LaserScan>>,
 ) {
     loop {
-        match stream.next().await {
-            Some(msg) => {
-                tx.set(msg);
-            }
-            // dont do anything if we dont get any lidar data
-            None => (),
+        if let Some(msg) = stream.next().await {
+            tx.set(msg);
         }
     }
 }

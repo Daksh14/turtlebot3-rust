@@ -4,6 +4,10 @@ mod camera;
 mod error;
 /// lidar module
 mod lidar;
+/// logger module
+mod logger;
+/// mongodb module
+mod mongodb;
 /// Navigation logic
 mod nav;
 /// Publisher module
@@ -11,7 +15,11 @@ mod publisher;
 /// yolo module
 mod yolo;
 
+use crate::logger::{
+    Battery, ErrorDetails, ErrorSeverity, EventType, Location, LogEntry, Sensors, Status,
+};
 use async_cell::sync::AsyncCell;
+use mongodb::MongoLogger;
 use r2r::QosProfile;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
@@ -44,8 +52,56 @@ pub enum Sequence {
     Stop,
 }
 
+/// General log struct creator for easy mongodb logging
+/// [NOTE]: right now has mock values, needs to be updated to be realtime
+/// this is a great idea if done right !!!
+async fn update_and_create_log_entry() -> LogEntry {
+    let location = Location {
+        x: 10.5,
+        y: 20.3,
+        orientation: 45.0,
+    };
+
+    let battery = Battery {
+        level: 85.0,
+        voltage: 12.6,
+        charging: false,
+    };
+
+    let sensors = Sensors {
+        proximity: vec![1.5, 2.0, 1.8, 2.2],
+        temperature: Some(25.5),
+        light: Some(800.0),
+    };
+
+    let error = ErrorDetails {
+        code: "E001".to_string(),
+        severity: ErrorSeverity::Low,
+    };
+
+    LogEntry::new(
+        "bot_001".to_string(),
+        EventType::Info,
+        "Navigation".to_string(),
+        Status::Success,
+        "Successfully completed navigation task".to_string(),
+    )
+    .with_location(location)
+    .with_battery(battery)
+    .with_sensors(sensors)
+    .with_error(error)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // setup mongo logger
+    let mongo_logger =
+        MongoLogger::new("mongodb://10.170.9.20:27017", "ros2_bot_logs", "logs").await?;
+
+    // create our log entry
+    let nlog = update_and_create_log_entry().await;
+    mongo_logger.log_entry(nlog).await?;
+
     // duration of each node spin
     let node_spin_dur = std::time::Duration::from_millis(5);
 
@@ -62,7 +118,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::thread::spawn(move || {
         let cam = camera::cam_plus_yolo_detect(yolo_tx);
 
-        println!("{:?}", cam);
+        println!("{:?}", cam)
     });
 
     let lidar_cl = Arc::clone(&lidar_node);

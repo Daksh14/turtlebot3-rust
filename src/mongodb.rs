@@ -1,6 +1,6 @@
 use mongodb::{Client, options::ClientOptions};
 use std::error::Error;
-use crate::logging::LogEntry;
+use crate::logger::LogEntry;
 
 /// MongoDB client wrapper for logging messages
 pub struct MongoLogger {
