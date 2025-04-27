@@ -95,8 +95,13 @@ async fn update_and_create_log_entry() -> LogEntry {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // setup mongo logger
-    let mongo_logger =
-        MongoLogger::new("mongodb://10.170.9.20:27017", "ros2_bot_logs", "logs").await?;
+    // NOTE: IMPORTANT - formatting will probably need to change depending on actual layout of the
+    // mongo server. this is being tested on my own atlas mongodb server.
+    let mongo_logger = MongoLogger::new(
+        "mongodb+srv://team3:sjL9N7hFGnbT6wCD@team3logs.grhns2t.mongodb.net/?retryWrites=true&w=majority&appName=team3logs",
+        "teamthreedb",
+        "teamthreecollection"
+    ).await?;
 
     // create our log entry
     let nlog = update_and_create_log_entry().await;
