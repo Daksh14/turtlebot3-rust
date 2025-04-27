@@ -17,7 +17,7 @@ const YOLOV8_CLASS_LABELS: [&str; 5] = [
 ];
 
 /// Config json file data structure
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)]
 pub struct ModelConfig {
     /// ONNX model absolute path
@@ -26,6 +26,8 @@ pub struct ModelConfig {
     pub class_names: Vec<String>,
     /// model input image size
     pub input_size: i32,
+    /// swarm addresses
+    pub addr: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -34,7 +36,7 @@ pub struct Model {
 }
 
 /// load ModelConfig json config file
-fn load_model_file() -> Result<ModelConfig, Error> {
+pub fn load_model_file() -> Result<ModelConfig, Error> {
     // change the path if needed
     let file = File::open("../data/config.json")?;
     let reader = BufReader::new(file);
@@ -48,9 +50,7 @@ fn load_model_file() -> Result<ModelConfig, Error> {
 }
 
 /// Load the model to put in the
-pub fn load_model() -> Result<Model, Error> {
-    let model_config = load_model_file()?;
-
+pub fn load_model(model_config: ModelConfig) -> Result<Model, Error> {
     let options = Options::new()
         .with_model(&model_config.model_path)
         .expect("model should load")

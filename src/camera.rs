@@ -12,11 +12,11 @@ use tokio::sync::mpsc::Sender;
 use crate::{
     XyXy,
     error::Error,
-    yolo::{self},
+    yolo::{self, ModelConfig},
 };
 
-pub fn cam_plus_yolo_detect(yolo_tx: Sender<XyXy>) -> Result<(), Error> {
-    let mut model = yolo::load_model()?.model;
+pub fn cam_plus_yolo_detect(yolo_tx: Sender<XyXy>, model_config: ModelConfig) -> Result<(), Error> {
+    let mut model = yolo::load_model(model_config)?.model;
 
     let res = Resolution {
         width_x: 640,
@@ -47,8 +47,8 @@ pub fn cam_plus_yolo_detect(yolo_tx: Sender<XyXy>) -> Result<(), Error> {
 }
 
 #[allow(dead_code)]
-pub async fn yolo_detect_test() -> Option<()> {
-    let mut model = yolo::load_model().ok()?.model;
+pub async fn yolo_detect_test(model_config: ModelConfig) -> Option<()> {
+    let mut model = yolo::load_model(model_config).ok()?.model;
 
     // load the yolo model
     let img_path = "../data/IMG_8405.JPG"; // change the path if needed

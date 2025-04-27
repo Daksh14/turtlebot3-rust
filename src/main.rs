@@ -20,6 +20,7 @@ mod yolo;
 use crate::logger::{
     Battery, ErrorDetails, ErrorSeverity, EventType, Location, LogEntry, Sensors, Status,
 };
+use crate::yolo::{ModelConfig, load_model_file};
 use async_cell::sync::AsyncCell;
 use mongodb::MongoLogger;
 use r2r::QosProfile;
@@ -96,6 +97,7 @@ async fn update_and_create_log_entry() -> LogEntry {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let config = load_model_file()?;
     // setup mongo logger
     // NOTE: IMPORTANT - formatting will probably need to change depending on actual layout of the
     // mongo server. this is being tested on my own atlas mongodb server.
@@ -125,9 +127,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let (yolo_tx, yolo_rx) = mpsc::channel::<XyXy>(1000);
 
+    let config_cl = config.clone();
     // camera process + yolo detect
     std::thread::spawn(move || {
-        let cam = camera::cam_plus_yolo_detect(yolo_tx);
+        let cam = camera::cam_plus_yolo_detect(yolo_tx, config_cl);
 
         println!("{:?}", cam)
     });
@@ -163,12 +166,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let cl = Arc::clone(&nav_node);
+    let config_cl = config.clone();
     // navigation process
     tokio::spawn(async move {
         // this is what the bot is doing at any point in time
         let start_sequence = Sequence::RandomMovement;
 
-        let x = nav::move_process(start_sequence, cl, weak_lidar, yolo_rx, weak_odom).await;
+        let x = nav::move_process(
+            start_sequence,
+            cl,
+            weak_lidar,
+            yolo_rx,
+            weak_odom,
+            config_cl,
+        )
+        .await;
         println!("{:?}", x);
     });
 

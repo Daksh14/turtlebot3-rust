@@ -4,13 +4,14 @@ use r2r::nav_msgs::msg::Odometry;
 use r2r::sensor_msgs::msg::LaserScan;
 use rand::distr::{Distribution, Uniform};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpStream;
+use tokio::net::UdpSocket;
 use tokio::sync::mpsc::Receiver;
 use tokio::time::{Duration, sleep};
 
 use crate::lidar::{self};
 // use crate::logger::Logger;
 use crate::odom::OdomData;
+use crate::yolo::ModelConfig;
 use crate::{Sequence, XyXy, publisher::TwistPublisher};
 
 use std::io::Result;
@@ -23,19 +24,22 @@ pub async fn move_process(
     lidar_rx: TakeWeak<LaserScan>,
     mut yolo_rx: Receiver<XyXy>,
     odom_rx: TakeWeak<OdomData>,
+    config: ModelConfig,
     // logger: Logger,
 ) -> Result<()> {
     let mut current_sequence = starting_seq;
 
     let publisher = TwistPublisher::new(nav_node.clone());
     let distance_step = Uniform::new(400, 500).expect("Failed to create distance step");
-    // bot 4
-    let stream_one = TcpStream::connect("10.170.9.28:8080").await;
-    let (mut read_half_one, mut write_half_one) = stream_one.into_split();
-
-    let mut string_buf_one = String::new();
+    // listening for swarm data
+    let swarm_listen = UdpSocket::bind("0.0.0.0:8000").await?;
+    let mut swarm_data_string = String::new();
+    swarm_listen.connect(&config.addr[0]).await?;
+    swarm_listen.connect(&config.addr[1]).await?;
 
     loop {
+        let mut buf = [0; 32];
+
         match current_sequence {
             Sequence::Intial360Rotation => {
                 rotate360(publisher.clone()).await;
@@ -76,28 +80,31 @@ pub async fn move_process(
                                 current_sequence = Sequence::TrackingToCharm;
                                 while let Some(odom) = (&odom_rx).await {
                                     let string = serde_json::to_string(&odom).expect("convertion should work");
+                                    let string = string.as_bytes();
+                                    // communicate this fact to the bot1 and bot2
 
-                                    write_half_one.write_all(string.as_bytes()).await;
-                                    write_half_one.flush().await;
-
+                                    swarm_listen.send(&string[..]).await;
                                     break;
                                 }
                             },
                             _ => (),
                         }
                     }
-                    // get stream from half one
-                    stream = read_half_one.read_to_string(&mut string_buf_one) => {
-                         if string_buf_one.len() > 0 {
-                             let json = serde_json::from_str::<OdomData>(&string_buf_one);
+                    swarm = swarm_listen.recv(&mut buf) => {
+                        match swarm {
+                            Ok(n) => {
+                                if n > 0 {
+                                    let json = serde_json::from_slice::<OdomData>(&buf);
+                if let Ok(json) = json {
+                    println!("json recieved {:?}", json);
+                }
 
-                             if let Ok(json) = json {
-                                 println!("json recieved {:?}", json);
+                                }
                             }
-                         }
+                            _ => (),
+                        }
 
-                         string_buf_one.clear();
-                  }
+                    }
                     // move randomly
                     _ = nav_move(
                         distance_step.sample(&mut rand::rng()) as f64,
