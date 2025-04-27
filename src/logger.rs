@@ -1,5 +1,8 @@
-use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+
+// i was not in the right headspace writing these?
+// temperature sensor, seriously??
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum EventType {
@@ -14,6 +17,13 @@ pub enum Status {
     Success,
     Failed,
     InProgress,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LidarData {
+    pub angle_min: f64,
+    pub angle_increment: f64,
+    pub ranges: Vec<f32>, // distance data for each single scan
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -33,8 +43,8 @@ pub struct Battery {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Sensors {
     pub proximity: Vec<f64>,
-    pub temperature: Option<f64>,
-    pub light: Option<f64>,
+    //pub temperature: Option<f64>,
+    //pub light: Option<f64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -59,6 +69,7 @@ pub struct LogEntry {
     pub operation: String,
     pub status: Status,
     pub message: String,
+    pub lidar: Option<LidarData>,
     pub location: Option<Location>,
     pub battery: Option<Battery>,
     pub sensors: Option<Sensors>,
@@ -80,13 +91,17 @@ impl LogEntry {
             operation,
             status,
             message,
+            lidar: None,
             location: None,
             battery: None,
             sensors: None,
             error: None,
         }
     }
-
+    pub fn with_lidar(mut self, lidar: LidarData) -> Self {
+        self.lidar = Some(lidar);
+        self
+    }
     pub fn with_location(mut self, location: Location) -> Self {
         self.location = Some(location);
         self
@@ -106,4 +121,4 @@ impl LogEntry {
         self.error = Some(error);
         self
     }
-} 
+}

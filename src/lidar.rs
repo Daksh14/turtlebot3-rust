@@ -6,6 +6,8 @@ use futures::Stream;
 use futures::stream::StreamExt;
 use r2r::sensor_msgs::msg::LaserScan;
 
+use crate::documenter;
+
 #[derive(Debug)]
 pub struct Direction {
     pub north: bool,
@@ -34,6 +36,10 @@ pub fn lidar_data(scan: LaserScan) -> Direction {
     let angle_min = scan.angle_min;
     let angle_increment = scan.angle_increment;
     let ranges = &scan.ranges;
+
+    let lidar_data = documenter::push_lidar(&scan); // for db
+    // Optionally, you can call generate_log_entry here if needed:
+    // let _ = documenter::generate_log_entry(lidar_data).await;
 
     let mut dir = Direction {
         north: false,
