@@ -10,6 +10,8 @@ mod logger;
 mod mongodb;
 /// Navigation logic
 mod nav;
+/// Odometer module for swarm algorithm
+mod odom;
 /// Publisher module
 mod publisher;
 /// yolo module
@@ -115,8 +117,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let lidar_node = generate_node("lidar_node")?;
 
     // Launch the lidar communication channel
-    let cell = AsyncCell::shared();
-    let weak = cell.take_weak();
+    let cell_lidar = AsyncCell::shared();
+    let weak_lidar = cell_lidar.take_weak();
+
+    let cell_odom = AsyncCell::shared();
+    let weak_odom = cell_odom.take_weak();
+
     let (yolo_tx, yolo_rx) = mpsc::channel::<XyXy>(1000);
 
     // camera process + yolo detect
@@ -127,6 +133,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let lidar_cl = Arc::clone(&lidar_node);
+
     // lidar process
     tokio::spawn(async move {
         let mut lidar_node_sub = {
@@ -138,7 +145,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .expect("Subscribing to lidar should work")
         };
 
-        lidar::lidar_scan(&mut lidar_node_sub, cell).await;
+        lidar::lidar_scan(&mut lidar_node_sub, cell_lidar).await;
+    });
+
+    let cl = Arc::clone(&nav_node);
+
+    // Odometer process
+    tokio::spawn(async move {
+        let mut odom_node_sub = {
+            let mut lock = cl.lock().expect("Locking the nav node should work");
+            let qos = QosProfile::default();
+            lock.subscribe("/odom", qos)
+                .expect("Subscribing to odom should work")
+        };
+
+        odom::listen(&mut odom_node_sub, cell_odom).await;
     });
 
     let cl = Arc::clone(&nav_node);
@@ -147,7 +168,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // this is what the bot is doing at any point in time
         let start_sequence = Sequence::RandomMovement;
 
-        nav::move_process(start_sequence, cl, weak, yolo_rx).await
+        let x = nav::move_process(start_sequence, cl, weak_lidar, yolo_rx, weak_odom).await;
+        println!("{:?}", x);
     });
 
     loop {

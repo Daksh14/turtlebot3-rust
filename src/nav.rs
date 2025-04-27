@@ -1,12 +1,19 @@
 use async_cell::sync::TakeWeak;
 use r2r::geometry_msgs::msg::{Twist, Vector3};
+use r2r::nav_msgs::msg::Odometry;
 use r2r::sensor_msgs::msg::LaserScan;
 use rand::distr::{Distribution, Uniform};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpStream;
 use tokio::sync::mpsc::Receiver;
 use tokio::time::{Duration, sleep};
 
 use crate::lidar::{self};
+// use crate::logger::Logger;
+use crate::odom::OdomData;
 use crate::{Sequence, XyXy, publisher::TwistPublisher};
+
+use std::io::Result;
 
 // main navigation logic
 pub async fn move_process(
@@ -15,11 +22,18 @@ pub async fn move_process(
     nav_node: crate::Node,
     lidar_rx: TakeWeak<LaserScan>,
     mut yolo_rx: Receiver<XyXy>,
-) {
+    odom_rx: TakeWeak<OdomData>,
+    // logger: Logger,
+) -> Result<()> {
     let mut current_sequence = starting_seq;
 
     let publisher = TwistPublisher::new(nav_node.clone());
     let distance_step = Uniform::new(400, 500).expect("Failed to create distance step");
+    // bot 4
+    let stream_one = TcpStream::connect("10.170.9.28:8080").await;
+    let (mut read_half_one, mut write_half_one) = stream_one.into_split();
+
+    let mut string_buf_one = String::new();
 
     loop {
         match current_sequence {
@@ -32,11 +46,12 @@ pub async fn move_process(
             }
             Sequence::RandomMovement => {
                 tokio::select! {
+                    // lidar obstacle avoidance
                     lidar = &lidar_rx => {
                         match lidar {
                             Some(scan) => {
                                 let direction = lidar::lidar_data(scan);
-                                println!("Detected direction: {:?}", direction);
+                                // logger.direction(direction);
 
                                 if direction.north {
                                     nav_move(10.0, -0.2, publisher.clone()).await;
@@ -54,17 +69,39 @@ pub async fn move_process(
                             None => {}
                         }
                     }
+                    // check yolo reciever
                     yolo = yolo_rx.recv() => {
                         match yolo {
                             Some(_) => {
                                 current_sequence = Sequence::TrackingToCharm;
+                                while let Some(odom) = (&odom_rx).await {
+                                    let string = serde_json::to_string(&odom).expect("convertion should work");
+
+                                    write_half_one.write_all(string.as_bytes()).await;
+                                    write_half_one.flush().await;
+
+                                    break;
+                                }
                             },
                             _ => (),
                         }
                     }
+                    // get stream from half one
+                    stream = read_half_one.read_to_string(&mut string_buf_one) => {
+                         if string_buf_one.len() > 0 {
+                             let json = serde_json::from_str::<OdomData>(&string_buf_one);
+
+                             if let Ok(json) = json {
+                                 println!("json recieved {:?}", json);
+                            }
+                         }
+
+                         string_buf_one.clear();
+                  }
+                    // move randomly
                     _ = nav_move(
                         distance_step.sample(&mut rand::rng()) as f64,
-                        0.2,
+                        0.1,
                         publisher.clone(),
                     ) => {
                     }
@@ -95,6 +132,8 @@ pub async fn move_process(
             }
         }
     }
+
+    Ok(())
 }
 
 // move x units in x direction and y units in y direction
@@ -148,11 +187,7 @@ pub async fn rotate(z: f64, publisher: TwistPublisher) {
             y: 0.0,
             z: 0.0,
         }, // Move forward
-        angular: Vector3 {
-            x: 0.0,
-            y: 0.0,
-            z: z,
-        }, // Rotate slightly
+        angular: Vector3 { x: 0.0, y: 0.0, z }, // Rotate slightly
     };
 
     // Publish the rotation message
