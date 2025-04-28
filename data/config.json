@@ -1,5 +1,6 @@
 {
   "model_path": "../data/best_model.onnx",
   "input_size": 640,
+  "addr": ["192.168.1.246:8000", "0.0.0.0:8001"],
   "class_names": ["picture_frame", "robot", "football", "sheep", "cone"]
 }

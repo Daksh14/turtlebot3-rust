@@ -8,6 +8,12 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UdpSocket;
 use tokio::sync::mpsc::{Receiver, channel};
 use tokio::time::{Duration, sleep};
+<<<<<<< Updated upstream
+=======
+
+use crate::documenter;
+use crate::lidar::{self};
+>>>>>>> Stashed changes
 // use crate::logger::Logger;
 use crate::odom::OdomData;
 use crate::yolo::ModelConfig;
@@ -141,6 +147,8 @@ pub async fn nav_move(distance_x: f64, speed: f64, publisher: TwistPublisher) {
     println!("Speed: {}", speed);
     println!("Travel time: {}", travel_time);
     println!("distance: {}", distance_x);
+
+    documenter::push_nav(speed as u64, travel_time as f64, distance_x);
 
     let twist = Twist {
         linear: Vector3 {

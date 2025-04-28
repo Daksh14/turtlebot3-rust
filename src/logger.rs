@@ -1,3 +1,4 @@
+//use crate::lidar::Direction;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -21,16 +22,15 @@ pub enum Status {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LidarData {
-    pub angle_min: f64,
-    pub angle_increment: f64,
-    pub ranges: Vec<f32>, // distance data for each single scan
+    pub angle_increment: f32,
+    pub angle_min: f32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Location {
-    pub x: f64,
-    pub y: f64,
-    pub orientation: f64,
+    pub distance: f64,
+    pub speed: u64,
+    pub travel_time: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

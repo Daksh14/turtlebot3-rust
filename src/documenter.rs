@@ -15,11 +15,33 @@ use crate::logger::{
 
 use r2r::sensor_msgs::msg::LaserScan;
 
-pub async fn generate_log_entry(lidar_data: LidarData) -> LogEntry {
-    let location = Location {
-        x: 10.5,
-        y: 20.3,
-        orientation: 45.0,
+use std::cell::RefCell;
+use std::rc::Rc;
+//pub type curDirection = Rc<RefCell<Direction>>;
+
+static mut nangle_i: f32 = 1.1;
+static mut nangle_o: f32 = 1.1;
+
+static mut nspeed: u64 = 1234;
+static mut ntt: f64 = 1.2;
+static mut ndist: f64 = 1.2;
+
+pub async fn generate_log_entry() -> LogEntry {
+    println!("Generating log entry");
+
+    let lidar_data = unsafe {
+        LidarData {
+            angle_increment: nangle_i,
+            angle_min: nangle_o,
+        }
+    };
+
+    let location = unsafe {
+        Location {
+            speed: nspeed,
+            travel_time: ntt,
+            distance: ndist,
+        }
     };
 
     let battery = Battery {
@@ -51,11 +73,17 @@ pub async fn generate_log_entry(lidar_data: LidarData) -> LogEntry {
     .with_error(error)
 }
 
-// for lidar module
-pub fn push_lidar(scan: &LaserScan) -> LidarData {
-    LidarData {
-        angle_min: scan.angle_min as f64,
-        angle_increment: scan.angle_increment as f64,
-        ranges: scan.ranges.clone(),
+pub async fn push_lidar(ai: f32, ao: f32) {
+    unsafe {
+        nangle_i = ai;
+        nangle_o = ao;
+    }
+}
+
+pub async fn push_nav(spd: u64, tt: f64, dist: f64) {
+    unsafe {
+        nspeed = spd;
+        ntt = tt;
+        ndist = dist;
     }
 }

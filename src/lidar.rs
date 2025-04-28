@@ -8,6 +8,9 @@ use r2r::sensor_msgs::msg::LaserScan;
 
 use crate::documenter;
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 #[derive(Debug)]
 pub struct Direction {
     pub north: bool,
@@ -37,9 +40,7 @@ pub fn lidar_data(scan: &LaserScan) -> Direction {
     let angle_increment = scan.angle_increment;
     let ranges = &scan.ranges;
 
-    let lidar_data = documenter::push_lidar(&scan); // for db
-    // Optionally, you can call generate_log_entry here if needed:
-    // let _ = documenter::generate_log_entry(lidar_data).await;
+    //let lidar_data = documenter::push_lidar(dir);
 
     let mut dir = Direction {
         north: false,
@@ -74,6 +75,8 @@ pub fn lidar_data(scan: &LaserScan) -> Direction {
             _ => (),
         };
     }
+
+    let lidar_data = documenter::push_lidar(angle_increment, angle_min);
 
     dir
 }
