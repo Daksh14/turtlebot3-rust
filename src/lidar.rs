@@ -8,9 +8,6 @@ use r2r::sensor_msgs::msg::LaserScan;
 
 use crate::documenter;
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 #[derive(Debug)]
 pub struct Direction {
     pub north: bool,

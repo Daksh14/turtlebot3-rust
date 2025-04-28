@@ -1,25 +1,19 @@
-use crate::lidar::{self};
 use async_cell::sync::TakeWeak;
 use r2r::geometry_msgs::msg::{Twist, Vector3};
-use r2r::nav_msgs::msg::Odometry;
 use r2r::sensor_msgs::msg::LaserScan;
 use rand::distr::{Distribution, Uniform};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UdpSocket;
-use tokio::sync::mpsc::{Receiver, channel};
+use tokio::sync::mpsc::Receiver;
 use tokio::time::{Duration, sleep};
-<<<<<<< Updated upstream
-=======
 
 use crate::documenter;
 use crate::lidar::{self};
->>>>>>> Stashed changes
 // use crate::logger::Logger;
 use crate::odom::OdomData;
 use crate::yolo::ModelConfig;
 use crate::{Sequence, XyXy, publisher::TwistPublisher};
 
-use std::io::{self, Result};
+use std::io::Result;
 use std::sync::Arc;
 
 // main navigation logic
@@ -40,20 +34,18 @@ pub async fn move_process(
     // listening for swarm data
     let socket = UdpSocket::bind("0.0.0.0:8000").await?;
     socket.connect(&config.addr[0]).await?;
-    let socket_arc = Arc::new(socket);
-    let s = socket_arc.clone();
-    let (tx, mut rx) = channel::<Vec<u8>>(1_000);
 
-    let mut buf = [0; 2024];
+    let socket_arc = Arc::new(socket);
+
+    let mut buf = [0; 1024];
+
     loop {
-        // let socket_arc = Arc::clone(&socket_arc);
-        // tokio::spawn(async move {
-        //     let (len, addr) = socket_arc
-        //         .recv_from(&mut buf)
-        //         .await
-        //         .expect("reciving should work");
-        //     println!("{:?} bytes received from {:?}", len, addr);
-        // });
+        let socket_arc = Arc::clone(&socket_arc);
+        tokio::spawn(async move {
+            if let Ok(x) = socket_arc.try_recv(&mut buf) {
+                println!("recieved from socket bytes: {}", x);
+            }
+        });
 
         match current_sequence {
             Sequence::RandomMovement => {
@@ -87,7 +79,7 @@ pub async fn move_process(
                     }
                     // check yolo reciever
                     yolo = yolo_rx.recv() => {
-                        if let Some(_) = yolo {
+                        if yolo.is_some() {
                             current_sequence = Sequence::TrackingToCharm;
                         }
                     }
@@ -95,17 +87,15 @@ pub async fn move_process(
             }
             Sequence::TrackingToCharm => {
                 if let Some((x1, _, _, y2)) = yolo_rx.recv().await {
-                    while let Some(odom) = (&odom_rx).await {
+                    if let Some(odom) = (&odom_rx).await {
                         let string = serde_json::to_string(&odom).expect("convertion should work");
-                        let string = string.as_bytes();
+                        let _string = string.as_bytes();
                         // communicate this fact to the bot1 and bot2
                         // s.send(&string).await;
                         println!("Sending swarm info");
-
-                        break;
                     }
 
-                    if x1 >= 200.0 && x1 <= 280.0 {
+                    if (200.0..=280.0).contains(&x1) {
                         nav_stop(publisher.clone());
 
                         if y2 < 485.0 {
@@ -194,32 +184,6 @@ pub async fn rotate(z: f64, publisher: TwistPublisher) {
     }
 
     sleep(Duration::from_millis(100)).await;
-
-    nav_stop(publisher);
-}
-
-pub async fn rotate360(publisher: TwistPublisher) {
-    let twist = Twist {
-        linear: Vector3 {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        }, // Move forward
-        angular: Vector3 {
-            x: 0.0,
-            y: 0.0,
-            z: 0.3,
-        }, // Rotate slightly
-    };
-
-    // Publish the rotation message
-    match publisher.publish(&twist) {
-        Ok(_) => println!("Rotating instruction sent"),
-        Err(e) => eprintln!("Failed to publish 360 rotating instructions {}", e),
-    }
-
-    // Sleep for time needed to reach distance
-    sleep(Duration::from_secs(5)).await;
 
     nav_stop(publisher);
 }

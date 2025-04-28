@@ -19,10 +19,8 @@ mod publisher;
 /// yolo module
 mod yolo;
 
-use crate::logger::{
-    Battery, ErrorDetails, ErrorSeverity, EventType, LidarData, Location, LogEntry, Sensors, Status,
-};
-use crate::yolo::{ModelConfig, load_model_file};
+use crate::logger::LogEntry;
+use crate::yolo::load_model_file;
 use async_cell::sync::AsyncCell;
 use mongodb::MongoLogger;
 use r2r::QosProfile;
