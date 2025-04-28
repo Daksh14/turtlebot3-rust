@@ -31,7 +31,7 @@ pub async fn lidar_scan<T: Stream<Item = LaserScan> + Unpin>(
     }
 }
 
-pub fn lidar_data(scan: LaserScan) -> Direction {
+pub fn lidar_data(scan: &LaserScan) -> Direction {
     let detection_threshold = 0.3;
     let angle_min = scan.angle_min;
     let angle_increment = scan.angle_increment;

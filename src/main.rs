@@ -44,13 +44,10 @@ pub fn generate_node(name: &str) -> r2r::Result<Node> {
 
 /// What the bot is doing at any point in time
 pub enum Sequence {
-    Intial360Rotation,
     // Start randomly moving in x, y direction
     RandomMovement,
     // If charm is located, start moving towards it
     TrackingToCharm,
-    // Charm is collected
-    SharmCollected,
     // Stop
     Stop,
 }
