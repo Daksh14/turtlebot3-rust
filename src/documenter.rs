@@ -14,7 +14,7 @@ static mut NTT: f64 = 1.2;
 static mut NDIST: f64 = 1.2;
 
 pub async fn generate_log_entry() -> LogEntry {
-    println!("Generating log entry");
+    // println!("Generating log entry");
 
     let lidar_data = unsafe {
         LidarData {

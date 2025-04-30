@@ -9,4 +9,5 @@ mkdir -p ./output-binary
 docker cp $container_id:/rust-example/target/aarch64-unknown-linux-gnu/release/ros2_cmd_vel_publisher ./output-binary/
 
 # Copy into docker container
-scp output-binary/ros2_cmd_vel_publisher Daksh@10.170.9.15:~/team3sec2-rust/output-binary/
+scp ./output-binary/ros2_cmd_vel_publisher Yohanse@10.170.9.28:~/rust-example/output-binary/
+scp ./output-binary/ros2_cmd_vel_publisher Akhil@10.170.10.165:~/team3sec2-rust/output/

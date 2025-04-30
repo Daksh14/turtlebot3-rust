@@ -16,7 +16,7 @@ anyhow = "1.0.97"
 ort = "2.0.0-rc.9"
 rand = "0.9.0"
 async_cell = "0.2.2"
-ffmpeg-next = { version = "7.1.0", features = ["rpi"] }
+# ffmpeg-next = { version = "7.1.0", features = ["rpi"] }
 mongodb = "2.8.0"
 chrono = { version = "0.4", features = ["serde"]}
 

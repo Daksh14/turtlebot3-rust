@@ -20,7 +20,9 @@ mod publisher;
 mod yolo;
 
 use crate::logger::LogEntry;
+use crate::odom::OdomData;
 use crate::yolo::load_model_file;
+
 use async_cell::sync::AsyncCell;
 use mongodb::MongoLogger;
 use r2r::QosProfile;
@@ -48,6 +50,8 @@ pub enum Sequence {
     RandomMovement,
     // If charm is located, start moving towards it
     TrackingToCharm,
+    // If swarm instruction is sent track to the swarm
+    Swarming(OdomData),
     // Stop
     Stop,
 }
@@ -57,7 +61,7 @@ pub enum Sequence {
 /// this is a great idea if done right !!!
 async fn update_and_create_log_entry() -> LogEntry {
     let entry = documenter::generate_log_entry().await;
-    println!("{:#?}", entry); // <-- Pretty-print the full LogEntry
+    // println!("{:#?}", entry); // <-- Pretty-print the full LogEntry
 
     entry
 }

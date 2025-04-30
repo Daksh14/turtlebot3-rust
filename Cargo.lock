@@ -3177,7 +3177,6 @@ dependencies = [
  "anyhow",
  "async_cell",
  "chrono",
- "ffmpeg-next",
  "futures",
  "image",
  "mongodb",

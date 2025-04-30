@@ -6,12 +6,12 @@ use serde::{Deserialize, Serialize};
 
 use std::sync::Arc;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct OdomData {
     pub x1: f64,
     pub y1: f64,
-    pub x2: f64,
-    pub y2: f64,
+    pub z: f64,
+    pub w: f64,
 }
 
 pub async fn listen<T: Stream<Item = Odometry> + Unpin>(
@@ -25,11 +25,11 @@ pub async fn listen<T: Stream<Item = Odometry> + Unpin>(
                 let x1 = pose.x;
                 let y1 = pose.y;
 
-                let twist = msg.twist.twist.linear;
-                let x2 = twist.x;
-                let y2 = twist.y;
+                let orientation = msg.pose.pose.orientation;
+                let z = orientation.z;
+                let w = orientation.w;
 
-                let data = OdomData { x1, y1, x2, y2 };
+                let data = OdomData { x1, y1, z, w };
 
                 tx.set(data);
             }
