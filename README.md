@@ -2,6 +2,7 @@
 
 Simulation software for the turtleobot3 https://emanual.robotis.com/docs/en/platform/turtlebot3/overview/ (BURGER)
 
+
 The script requires the bringup script to be executed 
 ```
 ros2 launch turtlebot3_bringup robot.launch.py
@@ -45,3 +46,6 @@ The `Dockerfile.system` has steps to setup the system which can compile this rus
 -The resultin binary is around 1.5 megabytes and multithreaded, we can further try to reduce size by enabling fat LTO and by asking LLVM to prioritise small binary size over optimizations
 +the new binary is around 25.0 megabytes possiblity because of statically linking the onnx runtime.
 ```
+# Lidar Test Video
+![lidar_one](https://github.com/user-attachments/assets/3d019fdd-7071-444f-8b08-1a33a89f9b0e)
+![lidar_two](https://github.com/user-attachments/assets/41b2c56e-0758-4a60-a2c5-e6671445629c)
