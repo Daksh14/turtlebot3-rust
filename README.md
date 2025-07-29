@@ -2,6 +2,8 @@
 
 Simulation software for the turtleobot3 https://emanual.robotis.com/docs/en/platform/turtlebot3/overview/ (BURGER)
 
+# [Blog post](https://dakshu.xyz/blog/arj.html)
+
 # Lidar Test Video
 ![lidar_one](https://github.com/user-attachments/assets/3d019fdd-7071-444f-8b08-1a33a89f9b0e)
 ![lidar_two](https://github.com/user-attachments/assets/41b2c56e-0758-4a60-a2c5-e6671445629c)
